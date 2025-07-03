@@ -19,18 +19,205 @@ body {
 }
 
 #secondWindow {
-    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    background: #f8f9fa;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    padding: 24px 18px 18px 18px;
     margin: 10px;
     min-height: 370px;
+    height: 100%;
 }
 
 #moveTable {
     width: 100%;
-    max-height: 250px;
-    overflow: auto;
+    max-height: 220px;
+    overflow-y: auto;
+    margin-bottom: 18px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
 
 #controls {
+    margin-top: auto;
+}
+
+#controls .panel {
+    border-radius: 10px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    border: none;
+}
+
+#controls .panel-heading {
+    background: #e9ecef;
+    border-radius: 10px 10px 0 0;
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #333;
+}
+
+#controls .panel-body {
+    padding: 12px 10px;
+}
+
+#controls button, #controls select, #controls input[type=range] {
+    margin-bottom: 8px;
+}
+
+#controls label {
+    font-weight: 500;
+    color: #444;
+}
+
+#mainWindow {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+#evalBarContainer {
+    width: 40px;
+    height: 400px;
+    margin-right: 16px;
+    position: relative;
+    background: #222;
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: box-shadow 0.2s;
+}
+
+#evalBar {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+#evalBarWhite {
+    background: linear-gradient(to top, #fff 80%, #e0e0e0 100%);
+    width: 100%;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    transition: height 0.3s;
+}
+
+#evalBarBlack {
+    background: linear-gradient(to bottom, #000 80%, #444 100%);
+    width: 100%;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    transition: height 0.3s;
+}
+
+#evalBarMarker {
     position: absolute;
-    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, #f00 0%, #ffb300 100%);
+    box-shadow: 0 0 6px 2px #f00444;
+    z-index: 2;
+    border-radius: 2px;
+    transition: top 0.3s;
+}
+
+.eval-bar-hidden {
+    display: none !important;
+}
+
+#aiAssistantPanel .panel-heading {
+    background: #e3f2fd;
+    border-radius: 8px 8px 0 0;
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #1976d2;
+}
+#aiAssistantPanel .panel-body {
+    padding: 10px 12px;
+    background: #fafdff;
+    border-radius: 0 0 8px 8px;
+    min-height: 80px;
+    max-height: 160px;
+    overflow-y: auto;
+}
+#aiChat {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.ai-message {
+    background: #e3f2fd;
+    color: #1976d2;
+    border-radius: 6px;
+    padding: 6px 10px;
+    margin-bottom: 2px;
+    align-self: flex-start;
+    box-shadow: 0 1px 3px rgba(25, 118, 210, 0.07);
+    font-size: 1em;
+}
+
+#cheatsPanelWrapper button#cheatsToggleBtn img {
+    transition: filter 0.2s, transform 0.2s;
+}
+#cheatsPanelWrapper button#cheatsToggleBtn:hover img {
+    filter: grayscale(0) brightness(1.1) drop-shadow(0 4px 8px #0003);
+    transform: scale(1.1) rotate(-8deg);
+}
+#cheatsPanel.panel-danger {
+    border-radius: 10px;
+    box-shadow: 0 2px 12px rgba(220, 53, 69, 0.08);
+    border: none;
+}
+#cheatsPanel .panel-heading {
+    background: #f8d7da;
+    color: #721c24;
+    border-radius: 10px 10px 0 0;
+    font-size: 1.1em;
+    font-weight: 600;
+}
+#cheatsPanel .panel-body {
+    background: #fff5f5;
+    border-radius: 0 0 10px 10px;
+    padding: 10px 12px;
+    min-height: 60px;
+    font-size: 1em;
+}
+.cheat-move {
+    background: #fff;
+    border-left: 4px solid #dc3545;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    padding: 6px 12px;
+    color: #721c24;
+    font-weight: 500;
+    box-shadow: 0 1px 3px rgba(220, 53, 69, 0.07);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.cheat-move-score {
+    font-size: 0.95em;
+    color: #b71c1c;
+    margin-left: 10px;
+    font-weight: 600;
+}
+
+.highlight-from {
+    background: radial-gradient(circle, #ffe066 60%, #fffbe6 100%) !important;
+    box-shadow: 0 0 8px 2px #ffe06699;
+    z-index: 2;
+}
+.highlight-to {
+    background: radial-gradient(circle, #8fd19e 60%, #eafff0 100%) !important;
+    box-shadow: 0 0 8px 2px #8fd19e99;
+    z-index: 2;
 }

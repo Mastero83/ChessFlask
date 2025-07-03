@@ -4,6 +4,7 @@ var board,
   fenEl = $('#fen'),
   pgnEl = $('#pgn');
 
+var navIndex = null;
 
 // do not pick up pieces if the game is over
 // only pick up pieces for the side to move
@@ -75,6 +76,17 @@ var updateStatus = function() {
   statusEl.html(status);
   fenEl.html(game.fen());
   pgnEl.html(game.pgn());
+
+  updateEvalBar();
+
+  // Get last move
+  var history = game.history({ verbose: true });
+  if (history.length > 0) {
+    aiCommentOnMove(history[history.length - 1]);
+  }
+
+  navIndex = null;
+  board.position(game.fen());
 };
 
 var cfg = {
@@ -106,15 +118,6 @@ var getResponseMove = function() {
         setTimeout(function(){ board.position(game.fen()); }, 100);
     })
 }
-
-
-// did this based on a stackoverflow answer
-// http://stackoverflow.com/questions/29493624/cant-display-board-whereas-the-id-is-same-when-i-use-chessboard-js
-setTimeout(function() {
-    board = ChessBoard('board', cfg);
-    // updateStatus();
-}, 0);
-
 
 var setPGN = function() {
   var table = document.getElementById("pgn");
@@ -252,3 +255,263 @@ document.addEventListener('DOMContentLoaded', function() {
         setVolume(this.value);
     });
 });
+
+function updateEvalBar() {
+    var fen = game.fen();
+    $.get('/eval/' + encodeURIComponent(fen) + '/', function(score) {
+        score = parseInt(score);
+        // Treat near-zero as equal for display
+        if (score > -10 && score < 10) score = 0;
+        // Clamp score for display (e.g., -10 to +10)
+        var maxEval = 10;
+        var minEval = -10;
+        var clamped = Math.max(minEval, Math.min(maxEval, score / 100));
+        // Convert to percent: 1 = all white, 0 = all black
+        var percent = (clamped - minEval) / (maxEval - minEval);
+        var whiteHeight = percent * 100;
+        var blackHeight = (1 - percent) * 100;
+        $("#evalBarWhite").css('height', whiteHeight + '%');
+        $("#evalBarBlack").css('height', blackHeight + '%');
+        // Marker position (centered for 0 eval, top for max white, bottom for max black)
+        var barHeight = 400; // px
+        var markerHeight = 4; // px
+        var markerTop = (1 - percent) * (barHeight - markerHeight);
+        $("#evalBarMarker").css('top', markerTop + 'px');
+    });
+}
+
+function aiCommentOnMove(move) {
+    if (!move) return;
+    let comment = '';
+    if (move.san.includes('x')) {
+        comment = `That's a strong move! ${move.color === 'w' ? 'White' : 'Black'} captures on ${move.to}.`;
+        if (move.piece === 'q' && move.captured) comment = `Wow! The queen captures on ${move.to}. Bold play!`;
+        if (move.piece === 'r' && move.captured) comment = `A rook capture! Sometimes sacrifices lead to brilliancies.`;
+    } else if (move.san.includes('+')) {
+        comment = `Check! ${move.color === 'w' ? 'White' : 'Black'} puts the king in danger.`;
+    } else if (move.san.includes('#')) {
+        comment = `Checkmate! What a finish!`;
+    } else if (move.piece === 'r' && (move.flags.includes('c') || move.flags.includes('e'))) {
+        comment = `A rook sacrifice? This could be brilliant!`;
+    } else if (move.piece === 'q' && (move.flags.includes('c') || move.flags.includes('e'))) {
+        comment = `Queen sacrifice! That's a rare and daring move.`;
+    } else if (move.san === 'O-O' || move.san === 'O-O-O') {
+        comment = `Castling for safety. A classic chess principle.`;
+    } else {
+        const moveNames = {
+            p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king'
+        };
+        comment = `A solid move by ${move.color === 'w' ? 'White' : 'Black'} with the ${moveNames[move.piece]}.`;
+    }
+    const chat = document.getElementById('aiChat');
+    if (chat) {
+        const msg = document.createElement('div');
+        msg.className = 'ai-message';
+        msg.textContent = comment;
+        chat.appendChild(msg);
+        chat.scrollTop = chat.scrollHeight;
+    }
+}
+
+var cheatPreviewBackup = null;
+
+$(document).ready(function() {
+    // Render eval bar HTML inside container
+    $("#evalBarContainer").html(
+        '<div id="evalBar">' +
+        '<div id="evalBarWhite"></div>' +
+        '<div id="evalBarBlack"></div>' +
+        '<div id="evalBarMarker"></div>' +
+        '</div>'
+    );
+    // Toggle eval bar (now in controls panel)
+    $(document).on('change', '#toggleEvalBar', function() {
+        if ($(this).is(':checked')) {
+            $('#evalBarContainer').removeClass('eval-bar-hidden');
+        } else {
+            $('#evalBarContainer').addClass('eval-bar-hidden');
+        }
+    });
+    // Default: show
+    $('#evalBarContainer').removeClass('eval-bar-hidden');
+
+    // Initialize the chess board only after DOM is ready
+    board = ChessBoard('board', cfg);
+
+    // Board size slider functionality
+    var $slider = $('#boardSizeSlider');
+    var $sizeValue = $('#boardSizeValue');
+    function setBoardSize(size) {
+        $('#board').css({ width: size + 'px', height: size + 'px' });
+        board.resize();
+        $sizeValue.text(size + 'px');
+    }
+    $slider.on('input change', function() {
+        setBoardSize(this.value);
+    });
+    // Set initial size
+    setBoardSize($slider.val());
+
+    // Settings panel expand/collapse
+    $('#settingsToggleBtn').on('click', function() {
+        $('#settingsPanel').slideToggle(180);
+    });
+
+    // Cheats panel expand/collapse
+    $('#cheatsToggleBtn').on('click', function() {
+        $('#cheatsPanel').slideToggle(180, function() {
+            if ($('#cheatsPanel').is(':visible')) {
+                fetchAndShowCheatMoves();
+            }
+        });
+    });
+    // Fetch cheats after each move if panel is open
+    var oldUpdateStatusCheat = updateStatus;
+    updateStatus = function() {
+        oldUpdateStatusCheat();
+        if ($('#cheatsPanel').is(':visible')) {
+            fetchAndShowCheatMoves();
+        }
+    };
+
+    // AI Assistant panel toggle
+    $('#aiAssistantToggleBtn').on('click', function() {
+        $('#aiAssistantPanel').slideToggle(180);
+    });
+
+    // Show PGN panel on download button click
+    $('#downloadPgnBtn').on('click', function() {
+        $('#pgnText').val(game.pgn());
+        $('#pgnPanelWrapper').css('display', 'flex');
+    });
+    // Close PGN panel
+    $('#closePgnPanelBtn').on('click', function() {
+        $('#pgnPanelWrapper').hide();
+    });
+    // Download PGN from panel
+    $('#downloadPgnPanelBtn').on('click', function() {
+        var pgn = $('#pgnText').text();
+        var blob = new Blob([pgn], { type: 'text/plain' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'game.pgn';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function() {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 0);
+    });
+
+    // Move navigation controls
+    $('#moveNavBack').on('click', function() {
+        var history = game.history();
+        if (navIndex === null) navIndex = history.length;
+        if (navIndex > 0) {
+            navIndex--;
+            updateNavBoard();
+        }
+    });
+    $('#moveNavForward').on('click', function() {
+        var history = game.history();
+        if (navIndex === null) navIndex = history.length;
+        if (navIndex < history.length) {
+            navIndex++;
+            updateNavBoard();
+        }
+    });
+
+    // Import PGN from panel
+    $('#importPgnPanelBtn').on('click', function() {
+        var pgn = $('#pgnText').val();
+        var newGame = new Chess();
+        if (newGame.load_pgn(pgn)) {
+            game = newGame;
+            board.position(game.fen());
+            updateStatus();
+            $('#pgnPanelWrapper').hide();
+        } else {
+            alert('Invalid PGN. Please check your input.');
+        }
+    });
+
+    // Update PGN textarea whenever the game changes
+    var oldUpdateStatusPgn = updateStatus;
+    updateStatus = function() {
+        oldUpdateStatusPgn();
+        if ($('#pgnPanelWrapper').is(':visible')) {
+            $('#pgnText').val(game.pgn());
+        }
+    };
+
+    // Cheat move hover preview
+    $(document).on('mouseenter', '.cheat-move', function() {
+        var moveSan = $(this).find('span').first().text();
+        var tempGame = new Chess();
+        var history = game.history();
+        for (var i = 0; i < history.length; i++) {
+            tempGame.move(history[i]);
+        }
+        var move = tempGame.move(moveSan, { sloppy: true });
+        if (move) {
+            cheatPreviewBackup = board.fen();
+            board.position(tempGame.fen());
+            // Highlight from/to squares
+            highlightSquares(move.from, move.to);
+        }
+    });
+    $(document).on('mouseleave', '.cheat-move', function() {
+        if (cheatPreviewBackup) {
+            board.position(cheatPreviewBackup);
+            removeHighlights();
+            cheatPreviewBackup = null;
+        }
+    });
+});
+
+function highlightSquares(from, to) {
+    removeHighlights();
+    var fromSq = $('[data-square="' + from + '"]');
+    var toSq = $('[data-square="' + to + '"]');
+    fromSq.addClass('highlight-from');
+    toSq.addClass('highlight-to');
+}
+function removeHighlights() {
+    $('.highlight-from').removeClass('highlight-from');
+    $('.highlight-to').removeClass('highlight-to');
+}
+
+// Function to update the cheats moves list (to be called after backend support is added)
+function updateCheatsMovesList(moves) {
+    var $list = $('#cheatsMovesList');
+    $list.empty();
+    if (!moves || moves.length === 0) {
+        $list.append('<div class="cheat-move">(No moves yet)</div>');
+        return;
+    }
+    moves.slice(0, 5).forEach(function(move) {
+        $list.append('<div class="cheat-move">' +
+            '<span>' + move.san + '</span>' +
+            '<span class="cheat-move-score">' + move.score + '</span>' +
+        '</div>');
+    });
+}
+
+function fetchAndShowCheatMoves() {
+    var e = document.getElementById("sel1");
+    var depth = e ? e.value : 2;
+    var fen = game.fen();
+    $.get('/cheat_moves/' + depth + '/' + encodeURIComponent(fen) + '/', function(moves) {
+        updateCheatsMovesList(moves);
+    });
+}
+
+function updateNavBoard() {
+    var history = game.history();
+    var tempGame = new Chess();
+    for (var i = 0; i < (navIndex !== null ? navIndex : history.length); i++) {
+        tempGame.move(history[i]);
+    }
+    board.position(tempGame.fen());
+}

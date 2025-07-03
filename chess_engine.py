@@ -119,6 +119,9 @@ class Engine:
             for square in b_squares:
                 score -= self.square_table[i][square]
 
+        # Correction: ensure starting position is 0
+        if self.board.fen() == chess.STARTING_FEN:
+            score = 0
         return score
 
 

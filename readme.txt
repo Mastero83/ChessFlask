@@ -9,3 +9,5 @@ Install flask by running:
 
 Install python chess by running:
     pip install python-chess[uci,gaviota]
+
+http://127.0.0.1:5000/
