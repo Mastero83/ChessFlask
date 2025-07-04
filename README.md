@@ -1,84 +1,48 @@
 # ChessFlask: Mastermind Arena
 
-## Features
-- World-class chess engine powered by Stockfish
-- Modern, responsive UI with top icon bar for all controls
-- Cheat panel with Stockfish's best move suggestions
-- Real-time Stockfish debug output panel
-- Accordion-style settings for sound and advanced options
-- AI assistant with smarter, Stockfish-based feedback
-
-## Setup
-1. Clone the repo
-2. Download Stockfish and place `stockfish.exe` in the `stockfish/` folder
-3. Install requirements:
-   ```sh
-   python -m pip install -r requirements.txt
-   python -m pip install flask-socketio stockfish
-   ```
-4. Run the app:
-   ```sh
-   python flask_app.py
-   ```
-5. Open [http://127.0.0.1:5000/](http://127.0.0.1:5000/)
-
-## New in this Release
-- Stockfish engine integration for all move/eval/cheat/analysis
-- Top icon bar for navigation and controls
-- Accordion settings panel
-- Real-time debug panel for Stockfish output
-- Cleaner, more intuitive UI
-
-See `RELEASE_NOTES.md` for more details.
+## ♟️ Why ChessFlask?
+ChessFlask is the ultimate modern chess web app for players, club enthusiasts, and learners. Powered by Stockfish, it combines world-class analysis, a beautiful interface, and unique features you won't find anywhere else. Whether you want to play, analyze your club games, or explore openings, ChessFlask is your new chess home.
 
 ---
 
 ## ✨ Features
-- 🧩 Interactive chessboard with move validation
-- 📊 Evaluation bar and cheat mode
-- 🤖 AI Assistant with real-time commentary
-- 📥 Import/export and edit PGN
-- ⏪ Move navigation and visual previews
-- 🎨 Customizable board and settings
-- 🔍 Analyse and learn from openings (multi-game PGN upload)
-
----
-
-## 🆕 New in This Release
-- **Startup Screen**: Choose between 'Play against AI' and 'Analyse and Learn Openings' when you visit the app.
-- **Openings Module**: Upload a PGN file with multiple games, search and select a game, and load it into the main interface for analysis.
-- **Metadata Panel**: View game information (event, players, result, etc.) above the move list, toggleable with an info icon.
-- **Fully in-memory PGN processing**: No database or Docker required!
-
-### How to Use the Openings Module
-1. Start the app and choose **Analyse and Learn Openings**.
-2. Upload a PGN file containing multiple games (supports large files, shows first 10 for selection).
-3. Search and select a game from the list.
-4. Click **Load** to open the game in the main interface for review and analysis.
+- **Stockfish-Powered Play & Analysis**: Every move, hint, and analysis is backed by the world's strongest chess engine.
+- **Modern Home Screen**: Choose to play as White, Black, analyze a game, or learn openings—all from a stunning, intuitive start page.
+- **Player vs AI or Player vs Player**: Play against Stockfish or use analysis mode to review your own games, move by move.
+- **Cheat Mode "God Slider"**: Instantly see the best moves at any depth (1–20) with a beautiful slider—perfect for learning or "cheating."
+- **Move Navigation**: Step through your game with first/last/next/previous controls and a move number field.
+- **Accuracy Boxes**: After each game, see your accuracy (and your opponent's) in gorgeous, color-coded summary boxes—just like chess.com, but better.
+- **Game Summary Table**: Instantly see how many brilliants, bests, goods, inaccuracies, mistakes, and blunders you made, split by color, with emoticons.
+- **Openings Explorer**: Upload a PGN, filter by move sequence, and visually explore openings with a live board and move selection.
+- **Real-Time Stockfish Debug Panel**: See engine output live for the ultimate chess nerd experience.
+- **AI Assistant**: Get fun, real-time commentary on every move.
+- **Import/Export PGN**: Edit, import, and download PGN at any time.
+- **No Database, No Docker**: Everything runs in memory for instant setup and blazing speed.
 
 ---
 
 ## 🚀 Quick Start
-1. Install Python 3.7+
-2. Install dependencies:
+1. **Clone the repo**
+2. **Download Stockfish** and place `stockfish.exe` in the `stockfish/` folder
+3. **Install requirements:**
    ```sh
-   pip install -r requirements.txt
+   python -m pip install -r requirements.txt
    ```
-3. Run the app:
+4. **Run the app:**
    ```sh
    python flask_app.py
    ```
-4. Open your browser to [http://127.0.0.1:5000/](http://127.0.0.1:5000/)
+5. **Open** [http://127.0.0.1:5000/](http://127.0.0.1:5000/)
 
 ---
 
-## 📸 Screenshots
-
-**Gameplay:**
-![Gameplay Example](releaseNotes/Gameplay%20early.png)
-
-**Openings Analysis:**
-![Openings Analysis](releaseNotes/Analyse%20openings.png)
+## 🖼️ Screenshots
+- **Gameplay:**
+  ![Gameplay Example](releaseNotes/Gameplay%20early.png)
+- **Openings Analysis:**
+  ![Openings Analysis](releaseNotes/Analyse%20openings.png)
+- **Game Over Summary:**
+  ![Game Over Summary](releaseNotes/Analyse%20openings.png)
 
 ---
 
@@ -90,11 +54,6 @@ See `RELEASE_NOTES.md` for more details.
 ---
 
 ## 🙏 Credits
+Based on [brokenloop/FlaskChess](https://github.com/brokenloop/FlaskChess) and extended by the ChessFlask community. Special thanks to all contributors!
 
-This project is based on [brokenloop/FlaskChess](https://github.com/brokenloop/FlaskChess) by [brokenloop](https://github.com/brokenloop).
-
-We have extended and modernized the original codebase with new features, UI improvements, and documentation.
-
-Special thanks to the original author and contributors for their foundational work!
-
-Enjoy playing and analyzing chess with ChessFlask! 
+Enjoy playing, learning, and mastering chess with ChessFlask! 

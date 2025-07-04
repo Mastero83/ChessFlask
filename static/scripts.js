@@ -5,6 +5,11 @@ var board,
   pgnEl = $('#pgn');
 
 var navIndex = null;
+var selectedSquare = null;
+var legalDests = [];
+var aiMoveInProgress = false;
+var cheatDepth = 10;
+var evalHistory = [];
 
 // do not pick up pieces if the game is over
 // only pick up pieces for the side to move
@@ -17,6 +22,12 @@ var onDragStart = function(source, piece, position, orientation) {
 };
 
 var onDrop = function(source, target) {
+  if (playMode !== 'analysis' && playerColor === 'black' && game.turn() === 'w') {
+    return 'snapback';
+  }
+  if (playMode !== 'analysis' && playerColor === 'white' && game.turn() === 'b') {
+    return 'snapback';
+  }
   // see if the move is legal
   var move = game.move({
     from: source,
@@ -31,7 +42,9 @@ var onDrop = function(source, target) {
   playMoveSound(!!move.captured);
 
   updateStatus();
-  getResponseMove();
+  if (playMode !== 'analysis') {
+    getResponseMove();
+  }
 };
 
 // update the board position after the piece snap
@@ -77,14 +90,6 @@ var updateStatus = function() {
   fenEl.html(game.fen());
   pgnEl.html(game.pgn());
 
-  updateEvalBar();
-
-  // Get last move
-  var history = game.history({ verbose: true });
-  if (history.length > 0) {
-    aiCommentOnMove(history[history.length - 1]);
-  }
-
   navIndex = null;
   board.position(game.fen());
 
@@ -108,7 +113,9 @@ var cfg = {
   position: 'start',
   onDragStart: onDragStart,
   onDrop: onDrop,
-  onSnapEnd: onSnapEnd
+  onSnapEnd: onSnapEnd,
+  onMouseoverSquare: onMouseoverSquare,
+  onMouseoutSquare: onMouseoutSquare
 };
 
 var randomResponse = function() {
@@ -191,10 +198,38 @@ var takeBack = function() {
     updateStatus();
 }
 
+function getUrlParam(name) {
+    var results = new RegExp('[?&]' + name + '=([^&#]*)').exec(window.location.search);
+    return results ? decodeURIComponent(results[1]) : null;
+}
+
+var playerColor = getUrlParam('color') || 'white';
+var playMode = getUrlParam('mode') || 'cpu'; // 'cpu' or 'analysis'
+
 var newGame = function() {
     game.reset();
-    board.start();
-    updateStatus();
+    board.orientation(playerColor);
+    if (playMode === 'analysis') {
+        board.position(game.fen());
+        updateStatus();
+        return;
+    }
+    if (playerColor === 'black') {
+        updateStatus();
+        setTimeout(function() {
+            if (playMode !== 'analysis') {
+                getResponseMove();
+                setTimeout(function() {
+                    board.position(game.fen());
+                    updateStatus();
+                }, 400);
+            }
+        }, 300);
+    } else {
+        board.orientation('white');
+        board.position(game.fen());
+        updateStatus();
+    }
 }
 
 var getCapturedPieces = function() {
@@ -269,30 +304,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-function updateEvalBar() {
-    var fen = game.fen();
-    $.get('/eval/' + encodeURIComponent(fen) + '/', function(score) {
-        score = parseInt(score);
-        // Treat near-zero as equal for display
-        if (score > -10 && score < 10) score = 0;
-        // Clamp score for display (e.g., -10 to +10)
-        var maxEval = 10;
-        var minEval = -10;
-        var clamped = Math.max(minEval, Math.min(maxEval, score / 100));
-        // Convert to percent: 1 = all white, 0 = all black
-        var percent = (clamped - minEval) / (maxEval - minEval);
-        var whiteHeight = percent * 100;
-        var blackHeight = (1 - percent) * 100;
-        $("#evalBarWhite").css('height', whiteHeight + '%');
-        $("#evalBarBlack").css('height', blackHeight + '%');
-        // Marker position (centered for 0 eval, top for max white, bottom for max black)
-        var barHeight = 400; // px
-        var markerHeight = 4; // px
-        var markerTop = (1 - percent) * (barHeight - markerHeight);
-        $("#evalBarMarker").css('top', markerTop + 'px');
-    });
-}
-
 function aiCommentOnMove(move) {
     if (!move) return;
     let comment = '';
@@ -348,8 +359,10 @@ $(document).ready(function() {
     // Default: show
     $('#evalBarContainer').removeClass('eval-bar-hidden');
 
-    // Initialize the chess board only after DOM is ready
-    board = ChessBoard('board', cfg);
+    // Initialize the chess board only if #board exists
+    if ($('#board').length > 0) {
+        board = ChessBoard('board', cfg);
+    }
 
     // Board size slider functionality
     var $slider = $('#boardSizeSlider');
@@ -422,12 +435,18 @@ $(document).ready(function() {
     });
 
     // Move navigation controls
+    $('#moveNavFirst').on('click', function() {
+        navIndex = 0;
+        updateNavBoard();
+        updateMoveNavNumber();
+    });
     $('#moveNavBack').on('click', function() {
         var history = game.history();
         if (navIndex === null) navIndex = history.length;
         if (navIndex > 0) {
             navIndex--;
             updateNavBoard();
+            updateMoveNavNumber();
         }
     });
     $('#moveNavForward').on('click', function() {
@@ -436,8 +455,35 @@ $(document).ready(function() {
         if (navIndex < history.length) {
             navIndex++;
             updateNavBoard();
+            updateMoveNavNumber();
         }
     });
+    $('#moveNavLast').on('click', function() {
+        navIndex = game.history().length;
+        updateNavBoard();
+        updateMoveNavNumber();
+    });
+    $('#moveNavNumber').on('change', function() {
+        var val = parseInt($(this).val(), 10);
+        var max = game.history().length;
+        if (isNaN(val) || val < 0) val = 0;
+        if (val > max) val = max;
+        navIndex = val;
+        updateNavBoard();
+        updateMoveNavNumber();
+    });
+    function updateMoveNavNumber() {
+        var history = game.history();
+        var idx = navIndex === null ? history.length : navIndex;
+        $('#moveNavNumber').val(idx);
+        $('#moveNavTotal').text('/ ' + history.length);
+    }
+    // Call updateMoveNavNumber whenever board is updated
+    var oldUpdateNavBoard = updateNavBoard;
+    updateNavBoard = function() {
+        oldUpdateNavBoard();
+        updateMoveNavNumber();
+    };
 
     // Import PGN from panel
     $('#importPgnPanelBtn').on('click', function() {
@@ -516,6 +562,58 @@ $(document).ready(function() {
         hideGameOverOverlay();
         newGame();
     });
+
+    // Auto-expand metaPanel accordion if importedPGN is set
+    if (window.location.pathname === '/play' && localStorage.getItem('importedPGN')) {
+        setTimeout(function() {
+            $('#metaPanel').collapse('show');
+        }, 200);
+    }
+
+    // Attach click-to-move handler using chessboard.js API
+    $('#board').on('mousedown', '.square-55d63', function(e) {
+        // Only handle left click
+        if (e.which !== 1) return;
+        var square = $(this).attr('data-square');
+        var piece = game.get(square) ? (game.get(square).color[0] + game.get(square).type.toUpperCase()) : null;
+        onSquareClick(square, piece);
+    });
+
+    // Set board orientation on load
+    board.orientation(playerColor);
+    // If playing as black, trigger AI move immediately (only in cpu mode)
+    if (playMode !== 'analysis' && playerColor === 'black' && game.history().length === 0) {
+        blockUserInput(true);
+        setTimeout(function() {
+            getResponseMove();
+            setTimeout(function() {
+                board.position(game.fen());
+                updateStatus();
+                blockUserInput(false);
+            }, 400);
+        }, 300);
+    }
+
+    // Enable clicking a cheat move to play it
+    $(document).on('click', '.cheat-move', function() {
+        var moveSan = $(this).find('span').first().text();
+        var move = game.move(moveSan, { sloppy: true });
+        if (move) {
+            playMoveSound(!!move.captured);
+            board.position(game.fen());
+            updateStatus();
+            // If it's now AI's turn, trigger AI move
+            if ((playerColor === 'white' && game.turn() === 'b') || (playerColor === 'black' && game.turn() === 'w')) {
+                setTimeout(function() { getResponseMove(); }, 300);
+            }
+        }
+    });
+
+    $(document).on('input change', '#cheatDepthSlider', function() {
+        cheatDepth = parseInt($(this).val(), 10);
+        $('#cheatDepthValue').text(cheatDepth);
+        fetchAndShowCheatMoves();
+    });
 });
 
 function highlightSquares(from, to) {
@@ -538,7 +636,12 @@ function updateCheatsMovesList(moves) {
         $list.append('<div class="cheat-move">(No moves yet)</div>');
         return;
     }
-    moves.forEach(function(move) {
+    // Sort moves so best move is always on top
+    var isWhite = game.turn() === 'w';
+    moves.sort(function(a, b) {
+        return isWhite ? b.score - a.score : a.score - b.score;
+    });
+    moves.forEach(function(move, idx) {
         var evalDisplay = '';
         if (typeof move.score === 'number') {
             if (Math.abs(move.score) >= 10000) {
@@ -558,8 +661,7 @@ function updateCheatsMovesList(moves) {
 }
 
 function fetchAndShowCheatMoves() {
-    var e = document.getElementById("sel1");
-    var depth = e ? e.value : 2;
+    var depth = cheatDepth;
     var fen = game.fen();
     $.get('/cheat_moves/' + depth + '/' + encodeURIComponent(fen) + '/', function(moves) {
         updateCheatsMovesList(moves);
@@ -655,6 +757,54 @@ var showGameOverOverlay = function(winner, moves, reason) {
     }
     $('#gameOverTitle').text(title);
     $('#gameOverMoves').text('Total moves played: ' + moves);
+    // Analyze game with Stockfish
+    var pgn = game.pgn();
+    var depth = 5;
+    $('#gameSummaryTableWrapper').html('<div style="margin:24px 0; color:#888;">Analyzing game with Stockfish...</div>');
+    $.ajax({
+        url: '/analyze_game/',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ pgn: pgn, depth: depth }),
+        success: function(res) {
+            var evals = res.evals;
+            var summary = classifyMovesWithEvalsByColor(evals);
+            var moveTypeEmojis = {
+                'Brilliant': '🤩 (!!)',
+                'Best': '👍 (!)',
+                'Excellent': '👏 (!)',
+                'Good': '🙂 (!?)',
+                'Inaccuracy': '😕 (?)',
+                'Mistake': '😬 (?)',
+                'Blunder': '😱 (??)'
+            };
+            // Calculate accuracy per color
+            var accuracy = calculateAccuracyByColor(evals);
+            var html = '';
+            html += '<div style="display:flex; gap:18px; justify-content:center; align-items:center; margin-bottom:16px;">';
+            html += '<div style="background:linear-gradient(120deg,#fff,#e3e3e3);border-radius:12px;box-shadow:0 2px 12px #1976d233;padding:18px 28px;display:flex;flex-direction:column;align-items:center;min-width:120px;">';
+            html += '<span style="font-size:2.2em; color:#1976d2; font-weight:900; line-height:1;">&#9812;</span>';
+            html += '<span style="font-size:2.1em; font-weight:800; color:#1976d2;">' + accuracy.white + '%</span>';
+            html += '<span style="font-size:1.1em; color:#555; font-weight:600; margin-top:2px;">White Accuracy</span>';
+            html += '</div>';
+            html += '<div style="background:linear-gradient(120deg,#222,#444);border-radius:12px;box-shadow:0 2px 12px #0003;padding:18px 28px;display:flex;flex-direction:column;align-items:center;min-width:120px;">';
+            html += '<span style="font-size:2.2em; color:#ffd600; font-weight:900; line-height:1;">&#9818;</span>';
+            html += '<span style="font-size:2.1em; font-weight:800; color:#ffd600;">' + accuracy.black + '%</span>';
+            html += '<span style="font-size:1.1em; color:#eee; font-weight:600; margin-top:2px;">Black Accuracy</span>';
+            html += '</div>';
+            html += '</div>';
+            html += '<table class="table table-bordered" style="margin-top:12px; font-size:1.1em;">';
+            html += '<thead><tr><th>Type</th><th style="color:#1976d2;">White</th><th style="color:#388e3c;">Black</th></tr></thead><tbody>';
+            for (var key in moveTypeEmojis) {
+                html += '<tr><td>' + moveTypeEmojis[key] + '</td><td>' + (summary.white[key] || 0) + '</td><td>' + (summary.black[key] || 0) + '</td></tr>';
+            }
+            html += '</tbody></table>';
+            $('#gameSummaryTableWrapper').html(html);
+        },
+        error: function() {
+            $('#gameSummaryTableWrapper').html('<div style="color:#d32f2f;">Analysis failed. Please try again.</div>');
+        }
+    });
     $('#gameOverOverlay').fadeIn(400);
     startFireworks();
 };
@@ -747,3 +897,171 @@ function appendDebugOutput(text) {
     $output.scrollTop($output[0].scrollHeight);
 }
 // Example usage: appendDebugOutput('Stockfish started...');
+
+function highlightLegalSquares(square) {
+    removeHighlights();
+    var moves = game.moves({ square: square, verbose: true });
+    moves.forEach(function(m) {
+        var $sq = $('[data-square="' + m.to + '"]');
+        // Add a dot only if not already present
+        if ($sq.find('.legal-move-dot').length === 0) {
+            $sq.append('<div class="legal-move-dot"></div>');
+        }
+    });
+    $('[data-square="' + square + '"]').addClass('highlight-selected');
+}
+
+function removeHighlights() {
+    $('.highlight-from').removeClass('highlight-from');
+    $('.highlight-to').removeClass('highlight-to');
+    $('.highlight-selected').removeClass('highlight-selected');
+    $('.legal-move-dot').remove();
+}
+
+// Update highlight-selected CSS and add dot style
+$('<style>\
+    .highlight-selected { background: radial-gradient(circle, rgba(120,120,120,0.15) 60%, transparent 70%) !important; }\
+    .legal-move-dot {\
+        position: absolute;\
+        top: 50%;\
+        left: 50%;\
+        width: 22%;\
+        height: 22%;\
+        background: rgba(30, 100, 200, 0.32);\
+        border-radius: 50%;\
+        transform: translate(-50%, -50%);\
+        pointer-events: none;\
+        z-index: 3;\
+        box-shadow: 0 1px 4px #0002;\
+    }\
+    .square-55d63 { position: relative; }\
+    #board.block-input .square-55d63 { pointer-events: none; opacity: 0.7; }\
+</style>').appendTo('head');
+
+// Remove highlight on hover, only show on click
+function onMouseoverSquare(square, piece) {
+    // No highlight on hover anymore
+}
+
+function onMouseoutSquare(square, piece) {
+    // No highlight on hover anymore
+}
+
+function onSquareClick(square, piece) {
+    if (selectedSquare) {
+        if (square === selectedSquare) {
+            selectedSquare = null;
+            removeHighlights();
+            return;
+        }
+        if (legalDests.includes(square)) {
+            var move = game.move({ from: selectedSquare, to: square, promotion: 'q' });
+            if (move) {
+                playMoveSound(!!move.captured);
+                updateStatus();
+                getResponseMove();
+            }
+            selectedSquare = null;
+            removeHighlights();
+            return;
+        }
+        if (piece && piece[0] === game.turn()) {
+            selectedSquare = square;
+            legalDests = game.moves({ square: square, verbose: true }).map(m => m.to);
+            highlightLegalSquares(square);
+            return;
+        }
+        selectedSquare = null;
+        removeHighlights();
+        return;
+    } else {
+        if (piece && piece[0] === game.turn()) {
+            selectedSquare = square;
+            legalDests = game.moves({ square: square, verbose: true }).map(m => m.to);
+            highlightLegalSquares(square);
+        }
+    }
+}
+
+function blockUserInput(block) {
+    if (block) {
+        $('#board').addClass('block-input');
+    } else {
+        $('#board').removeClass('block-input');
+    }
+}
+
+// Simple heuristic for move classification (placeholder)
+function analyzeGameSummary() {
+    var history = game.history({ verbose: true });
+    var summary = { 'Brilliant': 0, 'Best': 0, 'Excellent': 0, 'Good': 0, 'Inaccuracy': 0, 'Mistake': 0, 'Blunder': 0 };
+    // Placeholder: classify all as Good
+    for (var i = 0; i < history.length; i++) {
+        summary['Good']++;
+    }
+    return summary;
+}
+
+$(document).on('click', '#closeGameOverBtn', function() {
+    $('#gameOverOverlay').fadeOut(200);
+    stopFireworks();
+});
+
+// Classify moves based on evaluation change, split by color
+function classifyMovesWithEvalsByColor(evals) {
+    var types = [ 'Brilliant', 'Best', 'Excellent', 'Good', 'Inaccuracy', 'Mistake', 'Blunder' ];
+    var summary = { white: {}, black: {} };
+    types.forEach(function(t) { summary.white[t] = 0; summary.black[t] = 0; });
+    if (!evals || evals.length < 2) return summary;
+    for (var i = 1; i < evals.length; i++) {
+        var diff = evals[i] - evals[i-1];
+        var absDiff = Math.abs(diff);
+        var color = (i % 2 === 1) ? 'white' : 'black';
+        var type = 'Good';
+        if (absDiff < 20) type = 'Best';
+        else if (absDiff < 50) type = 'Excellent';
+        else if (absDiff < 100) type = 'Good';
+        else if (absDiff < 200) type = 'Inaccuracy';
+        else if (absDiff < 350) type = 'Mistake';
+        else type = 'Blunder';
+        summary[color][type]++;
+    }
+    // Optionally, mark the best move as Brilliant for each color
+    if (evals.length > 2) {
+        summary.white['Brilliant'] = 1;
+        summary.black['Brilliant'] = 1;
+    }
+    return summary;
+}
+
+// Calculate accuracy per color (simple chess.com-like logic)
+function calculateAccuracyByColor(evals) {
+    if (!evals || evals.length < 2) return { white: 0, black: 0 };
+    var total = { white: 0, black: 0 };
+    var max = { white: 0, black: 0 };
+    for (var i = 1; i < evals.length; i++) {
+        var diff = Math.abs(evals[i] - evals[i-1]);
+        var color = (i % 2 === 1) ? 'white' : 'black';
+        max[color] += 100;
+        // The closer the move is to 0 eval change, the higher the accuracy
+        var acc = Math.max(0, 100 - Math.min(diff / 10, 100));
+        total[color] += acc;
+    }
+    return {
+        white: max.white ? Math.round(total.white / (max.white/100)) : 0,
+        black: max.black ? Math.round(total.black / (max.black/100)) : 0
+    };
+}
+
+$(document).on('click', '#giveUpBtn', function() {
+    if (game.game_over()) return;
+    var winner = game.turn() === 'w' ? 'Black' : 'White';
+    var moves = game.history().length;
+    showGameOverOverlay(winner, moves, 'Resignation');
+});
+
+$(document).on('click', '#drawBtn', function() {
+    if (game.game_over()) return;
+    var moves = game.history().length;
+    showGameOverOverlay(null, moves, 'Draw agreed');
+});

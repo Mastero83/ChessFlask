@@ -73,28 +73,47 @@
                     </div>
                 </div>
                 <div class="col-xs-12 col-sm-6">
+                    <h3><span id="status">White to move</span></h3>
                     <!-- Cheats Panel (remains at top) -->
                     <div id="cheatsPanelWrapper" style="position: relative; margin-bottom: 18px;">
                         <div id="cheatsPanel" class="panel panel-danger" style="display: none; margin-top: 10px;">
                             <div class="panel-heading"><span class="glyphicon glyphicon-eye-open" style="margin-right:8px;"></span><b>Cheat Mode</b></div>
-                            <div class="panel-body" id="cheatsMovesList" style="min-height: 60px;">
-                                <div class="cheat-move">(No moves yet)</div>
+                            <div class="panel-body" style="min-height: 60px;">
+                                <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 12px;">
+                                    <label for="cheatDepthSlider" style="margin:0; font-weight:600;">Stockfish Depth:</label>
+                                    <input type="range" id="cheatDepthSlider" min="1" max="20" value="10" style="width: 120px;">
+                                    <span id="cheatDepthValue" style="font-weight:600; color:#d32f2f;">10</span>
+                                </div>
+                                <div id="cheatsMovesList">
+                                    <div class="cheat-move">(No moves yet)</div>
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div id="secondWindow">
-                        <h3><span id="status">White to move</span></h3>
                         <div id="moveNavControls" style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 8px;">
+                            <button id="moveNavFirst" class="btn btn-default btn-sm" title="First Move"><span class="glyphicon glyphicon-step-backward"></span></button>
                             <button id="moveNavBack" class="btn btn-default btn-sm" title="Previous Move"><span class="glyphicon glyphicon-chevron-left"></span></button>
+                            <input id="moveNavNumber" type="number" min="0" value="0" style="width: 60px; text-align: center; font-weight: bold; font-size: 1.1em; border-radius: 6px; border: 1px solid #bbb;" title="Go to move number">
+                            <span id="moveNavTotal" style="font-size: 1.1em; color: #888;">/ 0</span>
                             <button id="moveNavForward" class="btn btn-default btn-sm" title="Next Move"><span class="glyphicon glyphicon-chevron-right"></span></button>
+                            <button id="moveNavLast" class="btn btn-default btn-sm" title="Last Move"><span class="glyphicon glyphicon-step-forward"></span></button>
                         </div>
                         <!-- Metadata Panel -->
-                        <div id="metaPanel" class="panel panel-info" style="display: none; margin-bottom: 12px;">
-                            <div class="panel-heading" style="display: flex; align-items: center;">
-                                <span class="glyphicon glyphicon-info-sign" style="margin-right:8px;"></span><b>Game Information</b>
-                            </div>
-                            <div class="panel-body" id="metaPanelBody">
-                                <!-- Metadata fields will be injected here -->
+                        <div id="metaPanelAccordion" class="panel-group" role="tablist" aria-multiselectable="true" style="margin-bottom: 12px;">
+                            <div class="panel panel-info">
+                                <div class="panel-heading" role="tab" id="metaPanelHeading">
+                                    <h4 class="panel-title">
+                                        <a role="button" data-toggle="collapse" data-parent="#metaPanelAccordion" href="#metaPanel" aria-expanded="false" aria-controls="metaPanel">
+                                            <span class="glyphicon glyphicon-info-sign" style="margin-right:8px;"></span><b>Game Information</b>
+                                        </a>
+                                    </h4>
+                                </div>
+                                <div id="metaPanel" class="panel-collapse collapse" role="tabpanel" aria-labelledby="metaPanelHeading">
+                                    <div class="panel-body" id="metaPanelBody">
+                                        <!-- Metadata fields will be injected here -->
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div id="moveTable">
@@ -125,6 +144,8 @@
                                 <div class="panel-body">
                                     <button type="button" class="btn btn-primary" id="backBtn" onclick="takeBack()";>Take Back</button>
                                     <button type="button" class="btn btn-danger" id="reset" onclick="newGame()";>New Game</button>
+                                    <button type="button" class="btn btn-warning" id="giveUpBtn">Give Up</button>
+                                    <button type="button" class="btn btn-info" id="drawBtn">Offer Draw</button>
                                 </div>
                             </div>
                             <div class="panel panel-default" style="margin-bottom: 10px;">
@@ -209,8 +230,10 @@
         <div id="gameOverOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(20,30,40,0.85); z-index:3000; align-items:center; justify-content:center; flex-direction:column;">
             <canvas id="fireworksCanvas" style="position:absolute; top:0; left:0; width:100vw; height:100vh; pointer-events:none;"></canvas>
             <div style="position:relative; z-index:2; background:#fff; border-radius:18px; box-shadow:0 8px 32px #0005; padding:48px 36px; text-align:center; max-width:400px; margin:auto;">
+                <button id="closeGameOverBtn" style="position:absolute; top:12px; right:18px; background:none; border:none; font-size:2em; color:#888; cursor:pointer; z-index:10;" title="Close">&times;</button>
                 <h2 id="gameOverTitle" style="font-size:2.2em; font-weight:800; color:#1976d2; margin-bottom:18px;"></h2>
                 <div id="gameOverMoves" style="font-size:1.2em; color:#444; margin-bottom:32px;"></div>
+                <div id="gameSummaryTableWrapper" style="margin-top:18px;"></div>
             </div>
         </div>
         <div id="debugPanel" style="display:none; max-width:700px; margin:24px auto 0 auto; background:#222; color:#fff; border-radius:12px; box-shadow:0 2px 12px #0005; padding:24px 18px;">

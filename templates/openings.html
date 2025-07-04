@@ -5,6 +5,7 @@
     <title>Analyse and Learn Openings - ChessFlask</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='libs/chessboard/css/chessboard-0.3.0.css') }}">
     <style>
         body { background: #f5f7fa; }
         .openings-container { max-width: 900px; margin: 40px auto; background: #fff; border-radius: 16px; box-shadow: 0 4px 24px #0001; padding: 32px; }
@@ -14,82 +15,240 @@
         .game-row:hover { background: #e3f2fd; }
         .search-bar { margin-bottom: 18px; }
         #loadingSpinner { display: none; text-align: center; margin: 24px 0; }
+        .chess-spinner {
+            width: 48px; height: 48px; position: relative; margin: 0 auto;
+        }
+        .chess-piece {
+            width: 32px; height: 32px; background: url('https://upload.wikimedia.org/wikipedia/commons/4/45/Chess_plt60.png') no-repeat center center / contain;
+            position: absolute; left: 8px; top: 8px;
+            animation: spin 1.2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .openings-highlight {
+            background: radial-gradient(circle, #ffd54f 60%, transparent 70%) !important;
+            box-shadow: 0 0 8px 2px #ffd54f99;
+        }
     </style>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.js"></script>
 </head>
 <body>
-    <div class="openings-container">
-        <div class="openings-title">Analyse and Learn Openings</div>
-        <form method="post" enctype="multipart/form-data" style="margin-bottom: 24px;" id="pgnUploadForm">
-            <label for="pgnfile">Upload a PGN file with multiple games:</label>
-            <input type="file" name="pgnfile" id="pgnfile" accept=".pgn" required>
-            <button type="submit" class="btn btn-primary">Upload</button>
-        </form>
-        <div id="loadingSpinner">
-            <span class="glyphicon glyphicon-refresh glyphicon-spin" style="font-size:2em;"></span>
-            <div>Processing PGN file, please wait...</div>
+    <div class="openings-container" style="display: flex; flex-direction: row; gap: 32px; align-items: flex-start; max-width: 1200px;">
+        <div style="flex: 2; min-width: 0;">
+            <div class="openings-title">Analyse and Learn Openings</div>
+            <div style="margin-bottom: 18px;">
+                <label for="maxGamesSlider">Max games to import:</label>
+                <input type="range" id="maxGamesSlider" min="5" max="1001" step="1" value="1000" style="width: 220px; vertical-align: middle; margin-left: 12px;">
+                <span id="maxGamesLabel">1000</span>
+                <span style="margin-left: 8px; color: #888;">(slide to max for unlimited)</span>
+            </div>
+            <form method="post" enctype="multipart/form-data" style="margin-bottom: 24px;" id="pgnUploadForm">
+                <label for="pgnfile">Upload a PGN file with multiple games:</label>
+                <input type="file" name="pgnfile" id="pgnfile" accept=".pgn" required>
+                <input type="hidden" name="max_games" id="maxGamesHidden" value="1000">
+                <button type="submit" class="btn btn-primary">Upload</button>
+            </form>
+            <div id="loadingSpinner" style="display: none; text-align: center; margin: 24px 0;">
+                <div class="loader-animation" style="margin-bottom: 18px;">
+                    <div class="chess-spinner">
+                        <div class="chess-piece"></div>
+                    </div>
+                </div>
+                <div id="loadingText">Processing PGN file, please wait...</div>
+                <div class="progress" style="height: 18px; margin-top: 12px; display: none;" id="progressBarWrapper">
+                    <div id="progressBar" class="progress-bar progress-bar-striped active" role="progressbar" style="width: 0%; min-width: 24px;">0%</div>
+                </div>
+            </div>
+            <div id="moveFilterSection" style="display:none; margin-bottom: 24px;">
+                <div id="moveDropdowns" class="input-group" style="display: flex; gap: 8px; align-items: center;"></div>
+            </div>
+            <div id="gamesSection" style="display:none;">
+                <div id="gamesWarning"></div>
+                <input type="text" class="form-control search-bar" id="searchInput" placeholder="Search by player, event, or result...">
+                <table class="table table-striped openings-list">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Event</th>
+                            <th>White</th>
+                            <th>Black</th>
+                            <th>Result</th>
+                            <th>Date</th>
+                            <th>ECO</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="gamesTable"></tbody>
+                </table>
+            </div>
+            <a href="/" class="btn btn-default" style="margin-top: 18px;">Back to Start</a>
         </div>
-        <div id="gamesSection" style="display:none;">
-            <div id="gamesWarning"></div>
-            <input type="text" class="form-control search-bar" id="searchInput" placeholder="Search by player, event, or result...">
-            <table class="table table-striped openings-list">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Event</th>
-                        <th>White</th>
-                        <th>Black</th>
-                        <th>Result</th>
-                        <th>Date</th>
-                        <th>ECO</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody id="gamesTable"></tbody>
-            </table>
+        <div style="flex: 1; min-width: 340px; max-width: 420px;">
+            <div id="openingsBoard" style="margin-bottom: 18px;"></div>
+            <div id="openingsMoveNav" style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 8px;">
+                <button id="openingsMoveFirst" class="btn btn-default btn-sm" title="First Move"><span class="glyphicon glyphicon-step-backward"></span></button>
+                <button id="openingsMoveBack" class="btn btn-default btn-sm" title="Previous Move"><span class="glyphicon glyphicon-chevron-left"></span></button>
+                <input id="openingsMoveNumber" type="number" min="0" value="0" style="width: 60px; text-align: center; font-weight: bold; font-size: 1.1em; border-radius: 6px; border: 1px solid #bbb;" title="Go to move number">
+                <span id="openingsMoveTotal" style="font-size: 1.1em; color: #888;">/ 0</span>
+                <button id="openingsMoveForward" class="btn btn-default btn-sm" title="Next Move"><span class="glyphicon glyphicon-chevron-right"></span></button>
+                <button id="openingsMoveLast" class="btn btn-default btn-sm" title="Last Move"><span class="glyphicon glyphicon-step-forward"></span></button>
+            </div>
         </div>
-        <a href="/" class="btn btn-default" style="margin-top: 18px;">Back to Start</a>
     </div>
     <script>
+    var openingsBoard = null;
+    var openingsGame = null;
+    var openingsNavIndex = 0;
+    var openingsHistory = [];
+    var allGames = [];
+    var selectedMoves = Array(10).fill(null);
+    var possibleFirstMoves = [];
+
+    function highlightSquares(squares) {
+        $('.openings-highlight').removeClass('openings-highlight');
+        squares.forEach(function(sq) {
+            $('[data-square="' + sq + '"]').addClass('openings-highlight');
+        });
+    }
+
+    function getPossibleFirstMoves(games) {
+        var moves = new Set();
+        games.forEach(function(game) {
+            if (game['move_1']) moves.add(game['move_1']);
+        });
+        return Array.from(moves);
+    }
+
+    function filterGamesByMove(move, moveNum) {
+        return allGames.filter(function(game) {
+            return game['move_' + moveNum] === move;
+        });
+    }
+
+    function renderGames(games) {
+        var $table = $('#gamesTable');
+        $table.empty();
+        games.forEach(function(game, i) {
+            $table.append('<tr class="game-row" data-index="' + game.index + '">' +
+                '<td>' + (i+1) + '</td>' +
+                '<td>' + game.event + '</td>' +
+                '<td>' + game.white + '</td>' +
+                '<td>' + game.black + '</td>' +
+                '<td>' + game.result + '</td>' +
+                '<td>' + game.date + '</td>' +
+                '<td>' + game.eco + '</td>' +
+                '<td><button class="btn btn-success btn-xs load-game-btn" data-index="' + game.index + '">Load</button></td>' +
+                '</tr>');
+        });
+        $('#gamesSection').show();
+    }
+
     $(function() {
         var jobId = '{{ job_id|default('') }}';
-        function renderGames(games) {
-            var $table = $('#gamesTable');
-            $table.empty();
-            games.forEach(function(game, i) {
-                $table.append('<tr class="game-row" data-index="' + game.index + '">' +
-                    '<td>' + (i+1) + '</td>' +
-                    '<td>' + game.event + '</td>' +
-                    '<td>' + game.white + '</td>' +
-                    '<td>' + game.black + '</td>' +
-                    '<td>' + game.result + '</td>' +
-                    '<td>' + game.date + '</td>' +
-                    '<td>' + game.eco + '</td>' +
-                    '<td><button class="btn btn-success btn-xs load-game-btn" data-index="' + game.index + '">Load</button></td>' +
-                    '</tr>');
+        var groupedGames = {};
+        function groupGamesByMove(games, moveNum) {
+            var groups = {};
+            games.forEach(function(game) {
+                var move = game['move_' + (moveNum + 1)] || 'Unknown';
+                if (!groups[move]) groups[move] = [];
+                groups[move].push(game);
             });
-            if (games.length === 100) {
-                $('#gamesWarning').html('<div class="alert alert-warning">Only the first 100 games are shown. Please upload a smaller file for more detailed analysis.</div>');
-            } else {
-                $('#gamesWarning').empty();
+            return groups;
+        }
+        function renderMoveDropdowns(games) {
+            var $container = $('#moveDropdowns');
+            $container.empty();
+            var filteredGames = games;
+            for (let i = 0; i < 10; i++) {
+                let groups = groupGamesByMove(filteredGames, i);
+                // Remove Unknown from dropdown
+                if (groups['Unknown']) delete groups['Unknown'];
+                let $sel = $('<select class="form-control move-select" style="min-width:120px; max-width:180px; display:inline-block;"></select>');
+                $sel.append('<option value="" selected disabled>Move ' + (i+1) + '</option>');
+                // Order by number of games, descending
+                Object.entries(groups).sort(function(a, b) { return b[1].length - a[1].length; }).forEach(function(entry) {
+                    var move = entry[0];
+                    var gamesArr = entry[1];
+                    $sel.append('<option value="' + move + '">' + move + ' (' + gamesArr.length + ')</option>');
+                });
+                $sel.data('move-index', i);
+                $container.append($sel);
+                // If a move is already selected, set it
+                if (selectedMoves[i]) $sel.val(selectedMoves[i]);
+                // If no options, stop rendering further dropdowns
+                if (Object.keys(groups).length === 0) break;
+                // Filter games for next dropdown
+                if (selectedMoves[i]) {
+                    filteredGames = groups[selectedMoves[i]] || [];
+                } else {
+                    break;
+                }
             }
+        }
+        function showMoveFilterSection(games) {
+            $('#moveFilterSection').show();
+            renderMoveDropdowns(games);
+        }
+        function updateProgressBar(progress, loaded, total) {
+            $('#progressBarWrapper').show();
+            $('#progressBar').css('width', progress + '%').text(progress + '%');
+            $('#loadingText').text('Loaded ' + loaded + ' of ' + total + ' games...');
         }
         function pollStatus() {
             if (!jobId) return;
             $('#loadingSpinner').show();
             $('#gamesSection').hide();
+            $('#moveFilterSection').hide();
             $.get('/openings_status/' + jobId, function(data) {
                 if (data.status === 'done') {
                     $('#loadingSpinner').hide();
-                    $('#gamesSection').show();
-                    renderGames(data.games);
+                    allGames = data.games;
+                    showMoveFilterSection(allGames);
+                    afterGamesLoaded();
                 } else if (data.status === 'processing') {
-                    setTimeout(pollStatus, 1000);
+                    updateProgressBar(data.progress, data.games_loaded, data.total_games);
+                    setTimeout(pollStatus, 500);
                 } else {
                     $('#loadingSpinner').hide();
                 }
             });
         }
+        $(document).on('change', '.move-select', function() {
+            var idx = $(this).data('move-index');
+            var val = $(this).val();
+            selectedMoves[idx] = val;
+            // Clear all deeper selections
+            for (let j = idx + 1; j < 10; j++) selectedMoves[j] = null;
+            renderMoveDropdowns(allGames);
+            // Always update the board to the selected move sequence
+            var moveSeq = selectedMoves.filter(Boolean);
+            if (openingsBoard && typeof Chess !== 'undefined') {
+                var tempGame = new Chess();
+                moveSeq.forEach(function(m) { tempGame.move(m, { sloppy: true }); });
+                openingsBoard.position(tempGame.fen());
+                $('#openingsMoveNumber').val(moveSeq.length);
+                $('#openingsMoveTotal').text('/ ' + moveSeq.length);
+                openingsNavIndex = moveSeq.length;
+                openingsGame = tempGame;
+                openingsHistory = moveSeq;
+            }
+            // Only show games if all selected dropdowns have a value (no nulls up to the last non-empty dropdown)
+            let lastSelected = selectedMoves.findIndex(v => v === null);
+            if (lastSelected === -1) lastSelected = 10;
+            if (lastSelected > 0 && selectedMoves[lastSelected - 1]) {
+                // Filter games by all selected moves
+                let filtered = allGames;
+                for (let i = 0; i < lastSelected; i++) {
+                    filtered = filtered.filter(g => g['move_' + (i+1)] === selectedMoves[i]);
+                }
+                renderGames(filtered);
+            } else {
+                $('#gamesSection').hide();
+            }
+        });
         if (jobId) {
             pollStatus();
         }
@@ -111,7 +270,97 @@
                 window.location.href = '/play';
             });
         });
+        // Max games slider logic
+        $('#maxGamesSlider').on('input change', function() {
+            var val = parseInt(this.value, 10);
+            if (val >= 1001) {
+                $('#maxGamesLabel').text('max');
+                $('#maxGamesHidden').val('max');
+            } else {
+                $('#maxGamesLabel').text(val);
+                $('#maxGamesHidden').val(val);
+            }
+        });
+        // Initialize the board
+        openingsBoard = ChessBoard('openingsBoard', {
+            draggable: false,
+            position: 'start',
+            pieceTheme: '/static/libs/chessboard/img/chesspieces/wikipedia/{piece}.png',
+        });
+        // Move navigation controls
+        $('#openingsMoveFirst').on('click', function() {
+            openingsNavIndex = 0;
+            updateOpeningsBoard();
+        });
+        $('#openingsMoveBack').on('click', function() {
+            if (openingsNavIndex > 0) openingsNavIndex--;
+            updateOpeningsBoard();
+        });
+        $('#openingsMoveForward').on('click', function() {
+            if (openingsNavIndex < openingsHistory.length) openingsNavIndex++;
+            updateOpeningsBoard();
+        });
+        $('#openingsMoveLast').on('click', function() {
+            openingsNavIndex = openingsHistory.length;
+            updateOpeningsBoard();
+        });
+        $('#openingsMoveNumber').on('change', function() {
+            var val = parseInt($(this).val(), 10);
+            if (isNaN(val) || val < 0) val = 0;
+            if (val > openingsHistory.length) val = openingsHistory.length;
+            openingsNavIndex = val;
+            updateOpeningsBoard();
+        });
+        // Reset board on page load
+        openingsGame = new Chess();
+        openingsHistory = [];
+        openingsNavIndex = 0;
+        updateOpeningsBoard();
+        // After games are loaded:
+        function afterGamesLoaded() {
+            possibleFirstMoves = getPossibleFirstMoves(allGames);
+            // Highlight all possible first move destinations
+            var tempGame = new Chess();
+            var destSquares = [];
+            possibleFirstMoves.forEach(function(m) {
+                var move = tempGame.move(m, {sloppy:true});
+                if (move) destSquares.push(move.to);
+                tempGame.undo();
+            });
+            highlightSquares(destSquares);
+            // Enable click-to-move for first move
+            $('#openingsBoard').off('mousedown').on('mousedown', '.square-55d63', function(e) {
+                if (e.which !== 1) return;
+                var square = $(this).attr('data-square');
+                // Find which move matches this destination
+                var move = null;
+                for (var i = 0; i < possibleFirstMoves.length; i++) {
+                    var temp = new Chess();
+                    var m = temp.move(possibleFirstMoves[i], {sloppy:true});
+                    if (m && m.to === square) {
+                        move = possibleFirstMoves[i];
+                        break;
+                    }
+                }
+                if (move) {
+                    // Make the move on the board
+                    openingsGame = new Chess();
+                    openingsGame.move(move, {sloppy:true});
+                    openingsHistory = [move];
+                    openingsNavIndex = 1;
+                    openingsBoard.position(openingsGame.fen());
+                    selectedMoves[0] = move;
+                    // Filter games and update table
+                    var filtered = filterGamesByMove(move, 1);
+                    renderGames(filtered);
+                    // Optionally, highlight next possible moves, etc.
+                }
+            });
+        }
     });
     </script>
+    <script src="{{ url_for('static',filename='libs/chessboard/js/chessboard-0.3.0.js') }}"></script>
+    <script src="{{ url_for('static',filename='libs/chessboard/js/chessboard-0.3.0.min.js') }}"></script>
+    <script src="{{ url_for('static',filename='scripts.js') }}"></script>
 </body>
 </html> 

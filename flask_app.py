@@ -30,6 +30,7 @@ def play():
 def openings():
     if request.method == 'POST':
         file = request.files.get('pgnfile')
+        max_games = request.form.get('max_games', '1000')
         if file:
             pgn_data = file.read().decode('utf-8')
             job_id = str(uuid.uuid4())
@@ -38,9 +39,10 @@ def openings():
                 'games': [],
                 'created_at': time.time(),
                 'filename': file.filename,
-                'pgn_data': pgn_data
+                'pgn_data': pgn_data,
+                'max_games': max_games
             }
-            threading.Thread(target=process_pgn_job, args=(job_id, pgn_data)).start()
+            threading.Thread(target=process_pgn_job, args=(job_id, pgn_data, max_games)).start()
             return redirect(url_for('openings', job_id=job_id))
     job_id = request.args.get('job_id')
     games = []
@@ -56,20 +58,40 @@ def openings_status(job_id):
     job = pgn_jobs.get(job_id)
     if not job:
         return jsonify({'status': 'not_found'})
-    return jsonify({'status': job['status'], 'games': job.get('games', [])})
+    return jsonify({'status': job['status'], 'games': job.get('games', []), 'progress': job.get('progress', 0), 'games_loaded': job.get('games_loaded', 0), 'total_games': job.get('total_games', 0)})
 
-def process_pgn_job(job_id, pgn_data):
+def process_pgn_job(job_id, pgn_data, max_games='1000'):
     import chess.pgn
-    max_games = 1000
     games = []
     pgn_io = io.StringIO(pgn_data)
-    count = 0
-    while count < max_games:
+    # Count total games for progress
+    total_games = 0
+    for _ in chess.pgn.read_headers(io.StringIO(pgn_data)):
+        total_games += 1
+    pgn_io.seek(0)
+    loaded = 0
+    if max_games == 'max':
+        max_games = None
+    else:
+        max_games = int(max_games)
+    while True:
+        if max_games and loaded >= max_games:
+            break
         game = chess.pgn.read_game(pgn_io)
         if game is None:
             break
         headers = game.headers
-        games.append({
+        node = game
+        moves = []
+        for i in range(10):
+            if node.variations:
+                node = node.variations[0]
+                moves.append(node.uci())
+            else:
+                moves.append(None)
+        if not moves[0]:
+            continue  # skip games with unknown first move
+        game_dict = {
             'event': headers.get('Event', ''),
             'white': headers.get('White', ''),
             'black': headers.get('Black', ''),
@@ -79,10 +101,20 @@ def process_pgn_job(job_id, pgn_data):
             'site': headers.get('Site', ''),
             'eco': headers.get('ECO', ''),
             'index': len(games)
-        })
-        count += 1
+        }
+        for i in range(10):
+            game_dict[f'move_{i+1}'] = moves[i]
+        games.append(game_dict)
+        loaded += 1
+        if total_games:
+            pgn_jobs[job_id]['progress'] = int(loaded * 100 / total_games)
+        else:
+            pgn_jobs[job_id]['progress'] = 0
+        pgn_jobs[job_id]['games_loaded'] = loaded
+        pgn_jobs[job_id]['total_games'] = total_games
     pgn_jobs[job_id]['games'] = games
     pgn_jobs[job_id]['status'] = 'done'
+    pgn_jobs[job_id]['progress'] = 100
 
 @app.route('/get_pgn_game/<job_id>/<int:index>')
 def get_pgn_game(job_id, index):
@@ -158,6 +190,31 @@ def start_stockfish_debug():
         for line in process.stdout:
             emit('debug_output', line.rstrip())
     threading.Thread(target=stream_output, daemon=True).start()
+
+@app.route('/analyze_game/', methods=['POST'])
+def analyze_game():
+    import chess
+    import chess.pgn
+    data = request.get_json()
+    pgn = data.get('pgn')
+    depth = int(data.get('depth', 5))
+    game = chess.pgn.read_game(io.StringIO(pgn))
+    board = game.board()
+    sf = StockfishEngine(depth=depth)
+    evals = []
+    prev_eval = None
+    for move in game.mainline_moves():
+        board.push(move)
+        sf.set_fen(board.fen())
+        eval_info = sf.get_evaluation()
+        if eval_info['type'] == 'cp':
+            score = eval_info['value']
+        elif eval_info['type'] == 'mate':
+            score = 100000 if eval_info['value'] > 0 else -100000
+        else:
+            score = 0
+        evals.append(score)
+    return jsonify({'evals': evals})
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)

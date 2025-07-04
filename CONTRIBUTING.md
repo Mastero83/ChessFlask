@@ -17,12 +17,12 @@ Open an issue or discussion and we'll be happy to help!
 
 ## Guidelines
 - Ensure compatibility with Stockfish engine integration
-- Follow the new UI structure (top icon bar, accordion settings, debug panel)
-- Test changes with real-time Stockfish output and cheat panel
+- Follow the new UI structure (top icon bar, accordion settings, debug panel, modern home screen)
+- Test changes with real-time Stockfish output, cheat panel, and accuracy/analysis features
 - Document new features in README and release notes
 
 ## Areas for Contribution
-- Engine/analysis improvements
-- UI/UX enhancements
+- Engine/analysis improvements (accuracy, move classification)
+- UI/UX enhancements (home screen, analysis mode, accuracy boxes)
 - Real-time features (SocketIO, debug, etc.)
 - Documentation and tutorials 

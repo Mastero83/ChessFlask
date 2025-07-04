@@ -9,7 +9,6 @@
 - Stockfish binary (download from https://stockfishchess.org/download/ and place in stockfish/)
 
 ## Installation
-
 1. Install Python 3.7+
 2. Install dependencies:
    ```sh
@@ -24,7 +23,7 @@ Then open your browser to [http://127.0.0.1:5000/](http://127.0.0.1:5000/)
 
 ## Project Structure
 - `flask_app.py` — Main Flask server
-- `chess_engine.py` — Chess logic and evaluation
+- `chess_engine.py` — Chess logic and Stockfish integration
 - `static/` — JS, CSS, images, sounds
 - `templates/` — HTML templates
 - `releaseNotes/` — Release notes, screenshots, and documentation
