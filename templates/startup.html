@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ChessFlask - Start</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body { background: #f5f7fa; }
+        .startup-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .startup-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px #0001;
+            padding: 40px 32px;
+            margin: 24px 0;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+        .startup-btn {
+            margin: 18px 0;
+            width: 100%;
+            font-size: 1.3em;
+            padding: 16px 0;
+            border-radius: 8px;
+        }
+        .startup-title {
+            font-size: 2.2em;
+            font-weight: 700;
+            margin-bottom: 18px;
+            color: #1976d2;
+        }
+        .startup-desc {
+            color: #444;
+            margin-bottom: 32px;
+        }
+    </style>
+</head>
+<body>
+    <div class="startup-container">
+        <div class="startup-card">
+            <div class="startup-title">Welcome to ChessFlask</div>
+            <div class="startup-desc">Choose what you want to do:</div>
+            <a href="{{ url_for('play') }}" class="btn btn-primary startup-btn">
+                <span class="glyphicon glyphicon-knight"></span> Play against AI
+            </a>
+            <a href="{{ url_for('openings') }}" class="btn btn-success startup-btn">
+                <span class="glyphicon glyphicon-education"></span> Analyse and Learn Openings
+            </a>
+        </div>
+    </div>
+</body>
+</html> 

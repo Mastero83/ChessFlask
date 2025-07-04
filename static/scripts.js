@@ -126,11 +126,12 @@ var setPGN = function() {
 }
 
 var createTable = function() {
-
-    var pgn = game.pgn().split(" ");
+    var pgn = game.pgn();
+    // Remove header lines
+    pgn = pgn.replace(/(\[.*?\]\s*)+/g, '').trim();
+    var moves = pgn.split(/\s+/);
     var data = [];
-
-    for (i = 0; i < pgn.length; i += 3) {
+    for (i = 0; i < moves.length; i += 3) {
         var index = i / 3;
         data[index] = {};
         for (j = 0; j < 3; j++) {
@@ -142,14 +143,13 @@ var createTable = function() {
             } else if (j === 2) {
                 label = "blackMove";
             }
-            if (pgn.length > i + j) {
-                data[index][label] = pgn[i + j];
+            if (moves.length > i + j) {
+                data[index][label] = moves[i + j];
             } else {
                 data[index][label] = "";
             }
         }
     }
-
     $('#pgn tr').not(':first').remove();
     var html = '';
     for (var i = 0; i < data.length; i++) {
@@ -157,7 +157,6 @@ var createTable = function() {
         + data[i].whiteMove + '</td><td>'
         + data[i].blackMove + '</td></tr>';
     }
-
     $('#pgn tr').first().after(html);
 }
 
@@ -468,6 +467,20 @@ $(document).ready(function() {
             cheatPreviewBackup = null;
         }
     });
+
+    // Load imported PGN if present
+    if (window.location.pathname === '/play' && localStorage.getItem('importedPGN')) {
+        var imported = localStorage.getItem('importedPGN');
+        if (imported) {
+            var newGame = new Chess();
+            if (newGame.load_pgn(imported)) {
+                game = newGame;
+                board.position(game.fen());
+                updateStatus();
+            }
+            localStorage.removeItem('importedPGN');
+        }
+    }
 });
 
 function highlightSquares(from, to) {
@@ -514,4 +527,71 @@ function updateNavBoard() {
         tempGame.move(history[i]);
     }
     board.position(tempGame.fen());
+}
+
+// --- Metadata Panel Logic ---
+function parsePgnHeaders(pgn) {
+    // Extract headers from PGN string
+    var headers = {};
+    var headerRegex = /\[(\w+)[ \t]+"([^"]*)"\]/g;
+    var match;
+    while ((match = headerRegex.exec(pgn)) !== null) {
+        headers[match[1]] = match[2];
+    }
+    return headers;
+}
+
+function renderMetaPanel(headers) {
+    var fields = [
+        { key: 'Event', label: 'Event' },
+        { key: 'Site', label: 'Site' },
+        { key: 'Date', label: 'Date' },
+        { key: 'Round', label: 'Round' },
+        { key: 'White', label: 'White' },
+        { key: 'Black', label: 'Black' },
+        { key: 'Result', label: 'Result' },
+        { key: 'WhiteElo', label: 'White Elo' },
+        { key: 'BlackElo', label: 'Black Elo' },
+        { key: 'ECO', label: 'ECO' }
+    ];
+    var html = '<table class="table table-condensed" style="margin-bottom:0;">';
+    fields.forEach(function(f) {
+        if (headers[f.key]) {
+            html += '<tr><th style="width:90px;">' + f.label + '</th><td>' + headers[f.key] + '</td></tr>';
+        }
+    });
+    html += '</table>';
+    $('#metaPanelBody').html(html);
+}
+
+function updateMetaPanelFromGame() {
+    // Get headers from current game PGN
+    var pgn = game.pgn();
+    var headers = parsePgnHeaders(pgn);
+    renderMetaPanel(headers);
+}
+
+// Toggle meta panel
+$(document).on('click', '#metaPanelToggleBtn', function() {
+    $('#metaPanel').slideToggle(180);
+});
+
+// Show meta panel by default if desired
+// $('#metaPanel').show();
+
+// When loading a new PGN (import or from opening selection), update meta panel
+var oldUpdateStatusMeta = updateStatus;
+updateStatus = function() {
+    oldUpdateStatusMeta();
+    updateMetaPanelFromGame();
+};
+
+// When importing PGN, also update meta panel
+$('#importPgnPanelBtn').on('click', function() {
+    setTimeout(updateMetaPanelFromGame, 100);
+});
+
+// When loading imported PGN from localStorage (on /play), update meta panel
+if (window.location.pathname === '/play' && localStorage.getItem('importedPGN')) {
+    setTimeout(updateMetaPanelFromGame, 200);
 }

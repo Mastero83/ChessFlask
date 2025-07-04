@@ -9,6 +9,9 @@
 - Board size and display settings
 - Collapsible settings and cheat panels
 - Visual move previews on hover
+- **Metadata Panel**: View game information (event, players, result, etc.) above the move list, toggleable with an info icon
+- **Openings Analysis**: Upload a multi-game PGN, search/select a game, and load it for review
+- **Fully in-memory PGN processing**: No database or Docker required!
 
 ## 🆕 Features
 - **Cheat Mode**: See up to 5 best moves with evaluation, preview moves visually
@@ -16,9 +19,15 @@
 - **PGN Import/Export**: Edit, import, and download PGN at any time
 - **Move Navigation**: Step through the game without affecting play
 - **Customizable Board**: Resize board, toggle evaluation bar, and more
+- **Game Metadata Panel**: Toggle game info above the move list
 
-## 🖼️ Gameplay Example
-See the screenshot above for a look at the new interface!
+## 🖼️ Screenshots
+
+**Gameplay:**
+![Gameplay Example](Gameplay%20early.png)
+
+**Openings Analysis:**
+![Openings Analysis](Analyse%20openings.png)
 
 ## 🛠️ Improvements
 - Modernized right panel with grouped controls

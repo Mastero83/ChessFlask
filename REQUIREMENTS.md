@@ -7,10 +7,12 @@
 - (Optional) Stockfish for advanced analysis
 
 ## Installation
-```sh
-pip install flask
-pip install python-chess[uci,gaviota]
-```
+
+1. Install Python 3.7+
+2. Install dependencies:
+   ```sh
+   pip install -r requirements.txt
+   ```
 
 ## Running the App
 ```sh
@@ -25,6 +27,10 @@ Then open your browser to [http://127.0.0.1:5000/](http://127.0.0.1:5000/)
 - `templates/` — HTML templates
 - `releaseNotes/` — Release notes, screenshots, and documentation
 
-## Usage
+## Features
 - Play chess, analyze games, use cheat mode, and more!
-- See `RELEASE_NOTES.md` for new features. 
+- See `RELEASE_NOTES.md` for new features.
+
+## PGN Uploads
+- PGN files are processed in memory. No database or Docker is required.
+- Large PGN files are supported; only the first 10 games are shown for selection. 

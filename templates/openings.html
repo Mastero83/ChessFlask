@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Analyse and Learn Openings - ChessFlask</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body { background: #f5f7fa; }
+        .openings-container { max-width: 900px; margin: 40px auto; background: #fff; border-radius: 16px; box-shadow: 0 4px 24px #0001; padding: 32px; }
+        .openings-title { font-size: 2em; font-weight: 700; color: #1976d2; margin-bottom: 18px; }
+        .openings-list { margin-top: 32px; }
+        .game-row { cursor: pointer; transition: background 0.15s; }
+        .game-row:hover { background: #e3f2fd; }
+        .search-bar { margin-bottom: 18px; }
+        #loadingSpinner { display: none; text-align: center; margin: 24px 0; }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+</head>
+<body>
+    <div class="openings-container">
+        <div class="openings-title">Analyse and Learn Openings</div>
+        <form method="post" enctype="multipart/form-data" style="margin-bottom: 24px;" id="pgnUploadForm">
+            <label for="pgnfile">Upload a PGN file with multiple games:</label>
+            <input type="file" name="pgnfile" id="pgnfile" accept=".pgn" required>
+            <button type="submit" class="btn btn-primary">Upload</button>
+        </form>
+        <div id="loadingSpinner">
+            <span class="glyphicon glyphicon-refresh glyphicon-spin" style="font-size:2em;"></span>
+            <div>Processing PGN file, please wait...</div>
+        </div>
+        <div id="gamesSection" style="display:none;">
+            <div id="gamesWarning"></div>
+            <input type="text" class="form-control search-bar" id="searchInput" placeholder="Search by player, event, or result...">
+            <table class="table table-striped openings-list">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Event</th>
+                        <th>White</th>
+                        <th>Black</th>
+                        <th>Result</th>
+                        <th>Date</th>
+                        <th>ECO</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="gamesTable"></tbody>
+            </table>
+        </div>
+        <a href="/" class="btn btn-default" style="margin-top: 18px;">Back to Start</a>
+    </div>
+    <script>
+    $(function() {
+        var jobId = '{{ job_id|default('') }}';
+        function renderGames(games) {
+            var $table = $('#gamesTable');
+            $table.empty();
+            games.forEach(function(game, i) {
+                $table.append('<tr class="game-row" data-index="' + game.index + '">' +
+                    '<td>' + (i+1) + '</td>' +
+                    '<td>' + game.event + '</td>' +
+                    '<td>' + game.white + '</td>' +
+                    '<td>' + game.black + '</td>' +
+                    '<td>' + game.result + '</td>' +
+                    '<td>' + game.date + '</td>' +
+                    '<td>' + game.eco + '</td>' +
+                    '<td><button class="btn btn-success btn-xs load-game-btn" data-index="' + game.index + '">Load</button></td>' +
+                    '</tr>');
+            });
+            if (games.length === 100) {
+                $('#gamesWarning').html('<div class="alert alert-warning">Only the first 100 games are shown. Please upload a smaller file for more detailed analysis.</div>');
+            } else {
+                $('#gamesWarning').empty();
+            }
+        }
+        function pollStatus() {
+            if (!jobId) return;
+            $('#loadingSpinner').show();
+            $('#gamesSection').hide();
+            $.get('/openings_status/' + jobId, function(data) {
+                if (data.status === 'done') {
+                    $('#loadingSpinner').hide();
+                    $('#gamesSection').show();
+                    renderGames(data.games);
+                } else if (data.status === 'processing') {
+                    setTimeout(pollStatus, 1000);
+                } else {
+                    $('#loadingSpinner').hide();
+                }
+            });
+        }
+        if (jobId) {
+            pollStatus();
+        }
+        $('#pgnUploadForm').on('submit', function() {
+            $('#loadingSpinner').show();
+        });
+        $(document).on('input', '#searchInput', function() {
+            var val = $(this).val().toLowerCase();
+            $('#gamesTable tr').each(function() {
+                var row = $(this);
+                var text = row.text().toLowerCase();
+                row.toggle(text.indexOf(val) !== -1);
+            });
+        });
+        $(document).on('click', '.load-game-btn', function() {
+            var idx = $(this).data('index');
+            $.get('/get_pgn_game/' + jobId + '/' + idx, function(pgn) {
+                localStorage.setItem('importedPGN', pgn);
+                window.location.href = '/play';
+            });
+        });
+    });
+    </script>
+</body>
+</html> 
