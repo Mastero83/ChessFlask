@@ -12,6 +12,12 @@
 - **Metadata Panel**: View game information (event, players, result, etc.) above the move list, toggleable with an info icon
 - **Openings Analysis**: Upload a multi-game PGN, search/select a game, and load it for review
 - **Fully in-memory PGN processing**: No database or Docker required!
+- Full Stockfish engine integration for all chess logic
+- Modern UI with top icon bar for all controls
+- Cheat panel now shows Stockfish's best moves with clear evaluation
+- Real-time Stockfish debug output panel
+- Accordion-style settings for sound and advanced options
+- Cleaner, more intuitive user experience
 
 ## 🆕 Features
 - **Cheat Mode**: See up to 5 best moves with evaluation, preview moves visually
@@ -38,6 +44,10 @@
 1. Install requirements (see `REQUIREMENTS.md`)
 2. Run `python flask_app.py`
 3. Open your browser to `http://127.0.0.1:5000/`
+
+## Setup Changes
+- Requires Stockfish binary in `stockfish/`
+- Requires `flask-socketio` and `stockfish` Python packages
 
 ---
 

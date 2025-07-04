@@ -1,5 +1,6 @@
 from flask import Flask, render_template, jsonify, request, redirect, url_for, send_file, session
 from chess_engine import *
+from chess_engine import StockfishEngine
 import chess
 import io
 import os
@@ -7,8 +8,11 @@ import tempfile
 import threading
 import time
 import uuid
+from flask_socketio import SocketIO, emit
+import subprocess
 
 app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*")
 app.secret_key = 'chessflask_secret_key'
 
 # In-memory PGN job storage
@@ -97,9 +101,10 @@ def get_pgn_game(job_id, index):
 
 @app.route('/move/<int:depth>/<path:fen>/')
 def get_move(depth, fen):
-    engine = Engine(fen)
-    move = engine.iterative_deepening(depth - 1)
-    return move
+    sf = StockfishEngine(depth=depth)
+    sf.set_fen(fen)
+    move = sf.get_best_move()
+    return move or ''
 
 @app.route('/test/<string:tester>')
 def test_get(tester):
@@ -107,24 +112,52 @@ def test_get(tester):
 
 @app.route('/eval/<path:fen>/')
 def get_eval(fen):
-    engine = Engine(fen)
-    score = engine.position_eval()
+    sf = StockfishEngine()
+    sf.set_fen(fen)
+    score = sf.get_evaluation()
     return str(score)
 
 @app.route('/cheat_moves/<int:depth>/<path:fen>/')
 def get_cheat_moves(depth, fen):
-    engine = Engine(fen)
-    board = engine.board
+    import chess
+    board = chess.Board(fen)
+    sf = StockfishEngine(depth=depth)
     moves_scores = []
-    for move in list(board.legal_moves):
+    for move in board.legal_moves:
         san = board.san(move)
         board.push(move)
-        score = engine.position_eval()
+        sf.set_fen(board.fen())
+        eval_info = sf.get_evaluation()
+        # Use centipawn value for sorting, mate is treated as very high/low value
+        if eval_info['type'] == 'cp':
+            score = eval_info['value']
+        elif eval_info['type'] == 'mate':
+            score = 100000 if eval_info['value'] > 0 else -100000
+        else:
+            score = 0
         board.pop()
         moves_scores.append({'san': san, 'score': score})
     reverse = board.turn == chess.WHITE
     moves_scores.sort(key=lambda x: x['score'], reverse=reverse)
     return jsonify(moves_scores[:5])
 
+@app.route('/stockfish_move/<int:depth>/<path:fen>/')
+def stockfish_move(depth, fen):
+    sf = StockfishEngine(depth=depth)
+    sf.set_fen(fen)
+    best_move = sf.get_best_move()
+    evaluation = sf.get_evaluation()
+    return jsonify({'best_move': best_move, 'evaluation': evaluation})
+
+@socketio.on('start_stockfish_debug')
+def start_stockfish_debug():
+    stockfish_path = os.path.join(os.path.dirname(__file__), 'stockfish', 'stockfish.exe')
+    process = subprocess.Popen([stockfish_path], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+    emit('debug_output', 'Stockfish started...')
+    def stream_output():
+        for line in process.stdout:
+            emit('debug_output', line.rstrip())
+    threading.Thread(target=stream_output, daemon=True).start()
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    socketio.run(app, debug=True)

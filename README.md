@@ -1,6 +1,35 @@
-# ChessFlask
+# ChessFlask: Mastermind Arena
 
-A modern, feature-rich chess web app built with Flask and python-chess.
+## Features
+- World-class chess engine powered by Stockfish
+- Modern, responsive UI with top icon bar for all controls
+- Cheat panel with Stockfish's best move suggestions
+- Real-time Stockfish debug output panel
+- Accordion-style settings for sound and advanced options
+- AI assistant with smarter, Stockfish-based feedback
+
+## Setup
+1. Clone the repo
+2. Download Stockfish and place `stockfish.exe` in the `stockfish/` folder
+3. Install requirements:
+   ```sh
+   python -m pip install -r requirements.txt
+   python -m pip install flask-socketio stockfish
+   ```
+4. Run the app:
+   ```sh
+   python flask_app.py
+   ```
+5. Open [http://127.0.0.1:5000/](http://127.0.0.1:5000/)
+
+## New in this Release
+- Stockfish engine integration for all move/eval/cheat/analysis
+- Top icon bar for navigation and controls
+- Accordion settings panel
+- Real-time debug panel for Stockfish output
+- Cleaner, more intuitive UI
+
+See `RELEASE_NOTES.md` for more details.
 
 ---
 

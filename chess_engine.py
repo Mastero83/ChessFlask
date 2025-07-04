@@ -3,6 +3,8 @@ import random
 import signal
 import time
 import cProfile
+from stockfish import Stockfish
+import os
 
 class Engine:
 
@@ -350,3 +352,24 @@ if __name__=="__main__":
 
 
     # print(newengine.board)
+
+# --- Stockfish Integration ---
+class StockfishEngine:
+    def __init__(self, depth=15):
+        stockfish_path = os.path.join(os.path.dirname(__file__), 'stockfish', 'stockfish.exe')
+        self.engine = Stockfish(path=stockfish_path, depth=depth)
+
+    def set_fen(self, fen):
+        self.engine.set_fen_position(fen)
+
+    def get_best_move(self):
+        return self.engine.get_best_move()
+
+    def get_evaluation(self):
+        return self.engine.get_evaluation()
+
+# Example usage (for testing):
+# sf = StockfishEngine()
+# sf.set_fen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+# print(sf.get_best_move())
+# print(sf.get_evaluation())

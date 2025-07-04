@@ -3,8 +3,10 @@
 ## Dependencies
 - Python 3.7+
 - Flask
+- flask-socketio
+- stockfish (Python package)
 - python-chess
-- (Optional) Stockfish for advanced analysis
+- Stockfish binary (download from https://stockfishchess.org/download/ and place in stockfish/)
 
 ## Installation
 

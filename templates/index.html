@@ -31,11 +31,37 @@
     <body>
         <nav class="navbar navbar-default navbar-fixed-top">
           <div class="container-fluid">
-              <h1 id="logo">ChessBot</h1>
+              <h1 id="logo" style="font-family: 'Segoe UI', 'Arial', sans-serif; font-weight: 800; font-size: 2.4em; color: #1976d2; letter-spacing: 1px; text-shadow: 1px 2px 8px #b3c6e7;">ChessFlask: <span style="color:#388e3c;">Mastermind Arena</span></h1>
           </div>
         </nav>
         <div class="container">
+            <div id="topIcons" style="display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 18px; margin-bottom: 12px;">
+                <a href="/" id="homeIconBtn" style="background: none; border: none; cursor: pointer; font-size: 1.8em; color: #1976d2; z-index: 10; border-radius: 50%; padding: 4px; text-decoration: none;" title="Back to Home">
+                    <span class="glyphicon glyphicon-home"></span>
+                </a>
+                <button id="cheatsToggleBtn" style="background: none; border: none; cursor: pointer; font-size: 1.8em; color: #888; z-index: 10;" title="Cheat Mode">
+                    <span class="glyphicon glyphicon-eye-open"></span>
+                </button>
+                <button id="settingsToggleBtn" style="background: none; border: none; cursor: pointer; font-size: 1.8em; color: #888; z-index: 10;" title="Settings">
+                    <span class="glyphicon glyphicon-cog"></span>
+                </button>
+                <button id="aiAssistantToggleBtn" style="background: none; border: none; cursor: pointer; font-size: 1.8em; color: #888; z-index: 10;" title="AI Assistant">
+                    <span class="glyphicon glyphicon-comment"></span>
+                </button>
+                <button id="downloadPgnBtn" style="background: none; border: none; cursor: pointer; font-size: 1.8em; color: #888; z-index: 10;" title="Import/Export PGN">
+                    <span class="glyphicon glyphicon-transfer"></span>
+                </button>
+                <button id="metaPanelToggleBtn" style="background: none; border: none; cursor: pointer; font-size: 1.8em; color: #888; z-index: 10;" title="Game Info">
+                    <span class="glyphicon glyphicon-info-sign"></span>
+                </button>
+                <button id="debugToggleBtn" style="background: none; border: none; cursor: pointer; font-size: 1.8em; color: #d32f2f; z-index: 10;" title="Debug Settings">
+                    <span class="glyphicon glyphicon-console"></span>
+                </button>
+            </div>
             <div class="row">
+                <div class="col-xs-12">
+                    <!-- Removed: <a href="/" class="btn btn-default" style="margin-bottom: 18px;"><span class="glyphicon glyphicon-home"></span> Back to Home</a> -->
+                </div>
                 <div class="col-xs-12 col-sm-6">
                     <div id="mainWindow" style="display: flex; flex-direction: row; align-items: flex-start;">
                         <div id="evalBarContainer"></div>
@@ -116,51 +142,49 @@
                             </div>
                             <!-- Settings Panel -->
                             <div id="settingsPanelWrapper" style="position: relative;">
-                                <button id="settingsToggleBtn" style="position: absolute; top: -40px; right: 0; background: none; border: none; cursor: pointer; font-size: 1.8em; color: #888; z-index: 10;" title="Settings">
-                                    <span class="glyphicon glyphicon-cog"></span>
-                                </button>
                                 <div id="settingsPanel" class="panel panel-default" style="display: none; margin-top: 10px;">
                                     <div class="panel-heading"><b>Settings</b></div>
                                     <div class="panel-body">
-                                        <div class="panel panel-default" style="margin-bottom: 10px;">
-                                            <div class="panel-heading"><b>Sound</b></div>
-                                            <div class="panel-body">
-                                                <button type="button" class="btn btn-default" id="muteBtn">Mute</button>
-                                                <input type="range" id="volSlider" min="0" max="1" step="0.01" value="0.5" style="width:100px; margin-left:10px; vertical-align:middle;">
+                                        <div class="panel-group" id="settingsAccordion" role="tablist" aria-multiselectable="true">
+                                            <div class="panel panel-default">
+                                                <div class="panel-heading" role="tab" id="headingSound">
+                                                    <h4 class="panel-title">
+                                                        <a role="button" data-toggle="collapse" data-parent="#settingsAccordion" href="#collapseSound" aria-expanded="true" aria-controls="collapseSound">
+                                                            Sound Settings
+                                                        </a>
+                                                    </h4>
+                                                </div>
+                                                <div id="collapseSound" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingSound">
+                                                    <div class="panel-body">
+                                                        <button type="button" class="btn btn-default" id="muteBtn">Mute</button>
+                                                        <input type="range" id="volSlider" min="0" max="1" step="0.01" value="0.5" style="width:100px; margin-left:10px; vertical-align:middle;">
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div class="panel panel-default">
-                                            <div class="panel-heading"><b>Display</b></div>
-                                            <div class="panel-body">
-                                                <label style="margin-bottom: 0;">
-                                                    <input type="checkbox" id="toggleEvalBar" checked style="margin-right: 5px;">Show Evaluation Bar
-                                                </label>
-                                                <div style="margin-top: 12px;">
-                                                    <label for="boardSizeSlider" style="margin-right: 8px;">Board Size</label>
-                                                    <input type="range" id="boardSizeSlider" min="300" max="640" value="640" step="10" style="width: 120px; vertical-align: middle;">
-                                                    <span id="boardSizeValue" style="margin-left: 6px;">640px</span>
+                                            <div class="panel panel-default">
+                                                <div class="panel-heading" role="tab" id="headingAdvanced">
+                                                    <h4 class="panel-title">
+                                                        <a class="collapsed" role="button" data-toggle="collapse" data-parent="#settingsAccordion" href="#collapseAdvanced" aria-expanded="false" aria-controls="collapseAdvanced">
+                                                            Advanced Settings
+                                                        </a>
+                                                    </h4>
+                                                </div>
+                                                <div id="collapseAdvanced" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingAdvanced">
+                                                    <div class="panel-body">
+                                                        <label style="margin-bottom: 0;">
+                                                            <input type="checkbox" id="toggleEvalBar" style="margin-right: 5px;">Show Evaluation Bar
+                                                        </label>
+                                                        <div style="margin-top: 12px;">
+                                                            <label for="boardSizeSlider" style="margin-right: 8px;">Board Size</label>
+                                                            <input type="range" id="boardSizeSlider" min="300" max="640" value="640" step="10" style="width: 120px; vertical-align: middle;">
+                                                            <span id="boardSizeValue" style="margin-left: 6px;">640px</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div id="bottomIcons" style="display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 18px;">
-                                <button id="cheatsToggleBtn" style="background: none; border: none; cursor: pointer; font-size: 1.8em; color: #888; z-index: 10;" title="Cheat Mode">
-                                    <span class="glyphicon glyphicon-eye-open"></span>
-                                </button>
-                                <button id="settingsToggleBtn" style="background: none; border: none; cursor: pointer; font-size: 1.8em; color: #888; z-index: 10;" title="Settings">
-                                    <span class="glyphicon glyphicon-cog"></span>
-                                </button>
-                                <button id="aiAssistantToggleBtn" style="background: none; border: none; cursor: pointer; font-size: 1.8em; color: #888; z-index: 10;" title="AI Assistant">
-                                    <span class="glyphicon glyphicon-comment"></span>
-                                </button>
-                                <button id="downloadPgnBtn" style="background: none; border: none; cursor: pointer; font-size: 1.8em; color: #888; z-index: 10;" title="Import/Export PGN">
-                                    <span class="glyphicon glyphicon-transfer"></span>
-                                </button>
-                                <button id="metaPanelToggleBtn" style="background: none; border: none; cursor: pointer; font-size: 1.8em; color: #888; z-index: 10;" title="Game Info">
-                                    <span class="glyphicon glyphicon-info-sign"></span>
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -181,6 +205,17 @@
                     </div>
                 </div>
             </div>
+        </div>
+        <div id="gameOverOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(20,30,40,0.85); z-index:3000; align-items:center; justify-content:center; flex-direction:column;">
+            <canvas id="fireworksCanvas" style="position:absolute; top:0; left:0; width:100vw; height:100vh; pointer-events:none;"></canvas>
+            <div style="position:relative; z-index:2; background:#fff; border-radius:18px; box-shadow:0 8px 32px #0005; padding:48px 36px; text-align:center; max-width:400px; margin:auto;">
+                <h2 id="gameOverTitle" style="font-size:2.2em; font-weight:800; color:#1976d2; margin-bottom:18px;"></h2>
+                <div id="gameOverMoves" style="font-size:1.2em; color:#444; margin-bottom:32px;"></div>
+            </div>
+        </div>
+        <div id="debugPanel" style="display:none; max-width:700px; margin:24px auto 0 auto; background:#222; color:#fff; border-radius:12px; box-shadow:0 2px 12px #0005; padding:24px 18px;">
+            <h4 style="margin-top:0; color:#ff5252;">Stockfish Debug Output</h4>
+            <textarea id="debugOutput" style="width:100%; min-height:180px; background:#111; color:#fff; font-family:monospace; font-size:1.1em; border-radius:8px; border:none; padding:12px; resize:vertical;" readonly></textarea>
         </div>
     </body>
 </html>

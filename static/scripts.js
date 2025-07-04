@@ -87,6 +87,20 @@ var updateStatus = function() {
 
   navIndex = null;
   board.position(game.fen());
+
+  var winner = null;
+  var reason = null;
+  if (game.in_checkmate()) {
+    winner = game.turn() === 'b' ? 'White' : 'Black';
+    reason = 'Checkmate';
+  } else if (game.in_draw()) {
+    winner = null;
+    reason = 'Draw';
+  }
+  if (game.game_over()) {
+    var moves = game.history().length;
+    showGameOverOverlay(winner, moves, reason);
+  }
 };
 
 var cfg = {
@@ -99,7 +113,7 @@ var cfg = {
 
 var randomResponse = function() {
     fen = game.fen()
-    $.get($SCRIPT_ROOT + "/move/" + fen, function(data) {
+    $.get('/move/' + depth + '/' + encodeURIComponent(fen) + '/', function(data) {
         game.move(data, {sloppy: true});
         // board.position(game.fen());
         updateStatus();
@@ -110,7 +124,7 @@ var getResponseMove = function() {
     var e = document.getElementById("sel1");
     var depth = e.options[e.selectedIndex].value;
     fen = game.fen();
-    $.get($SCRIPT_ROOT + "/move/" + depth + "/" + fen, function(data) {
+    $.get('/move/' + depth + '/' + encodeURIComponent(fen) + '/', function(data) {
         var move = game.move(data, {sloppy: true});
         // Play sound: check if capture
         playMoveSound(move && !!move.captured);
@@ -351,9 +365,13 @@ $(document).ready(function() {
     // Set initial size
     setBoardSize($slider.val());
 
-    // Settings panel expand/collapse
+    // Settings panel expand/collapse (now only one icon at the top)
     $('#settingsToggleBtn').on('click', function() {
         $('#settingsPanel').slideToggle(180);
+    });
+    // Accordion logic for settings
+    $('#settingsAccordion').on('show.bs.collapse', function (e) {
+        $(e.target).parent().siblings().find('.panel-collapse').collapse('hide');
     });
 
     // Cheats panel expand/collapse
@@ -481,6 +499,23 @@ $(document).ready(function() {
             localStorage.removeItem('importedPGN');
         }
     }
+
+    // Hide eval bar by default
+    if (!$('#toggleEvalBar').is(':checked')) {
+        $('#evalBarContainer').hide();
+    }
+    $('#toggleEvalBar').change(function() {
+        if ($(this).is(':checked')) {
+            $('#evalBarContainer').show();
+        } else {
+            $('#evalBarContainer').hide();
+        }
+    });
+
+    $('#gameOverNewGame').click(function() {
+        hideGameOverOverlay();
+        newGame();
+    });
 });
 
 function highlightSquares(from, to) {
@@ -503,10 +538,21 @@ function updateCheatsMovesList(moves) {
         $list.append('<div class="cheat-move">(No moves yet)</div>');
         return;
     }
-    moves.slice(0, 5).forEach(function(move) {
+    moves.forEach(function(move) {
+        var evalDisplay = '';
+        if (typeof move.score === 'number') {
+            if (Math.abs(move.score) >= 10000) {
+                // Mate in N
+                var mateN = Math.abs(move.score) === 100000 ? '' : Math.abs(move.score);
+                evalDisplay = (move.score > 0 ? '#+' : '#-') + mateN;
+            } else {
+                var cp = move.score / 100.0;
+                evalDisplay = (cp > 0 ? '+' : '') + cp.toFixed(2);
+            }
+        }
         $list.append('<div class="cheat-move">' +
-            '<span>' + move.san + '</span>' +
-            '<span class="cheat-move-score">' + move.score + '</span>' +
+            '<span style="min-width:60px;display:inline-block;font-weight:bold;">' + move.san + '</span>' +
+            '<span class="cheat-move-score" style="color:' + (move.score > 0 ? '#388e3c' : (move.score < 0 ? '#d32f2f' : '#888')) + '; font-weight:600; margin-left:12px;">' + evalDisplay + '</span>' +
         '</div>');
     });
 }
@@ -595,3 +641,109 @@ $('#importPgnPanelBtn').on('click', function() {
 if (window.location.pathname === '/play' && localStorage.getItem('importedPGN')) {
     setTimeout(updateMetaPanelFromGame, 200);
 }
+
+var showGameOverOverlay = function(winner, moves, reason) {
+    // Set winner and move info
+    var title = '';
+    if (winner) {
+        title = winner + ' wins!';
+    } else {
+        title = 'Draw!';
+    }
+    if (reason) {
+        title += ' (' + reason + ')';
+    }
+    $('#gameOverTitle').text(title);
+    $('#gameOverMoves').text('Total moves played: ' + moves);
+    $('#gameOverOverlay').fadeIn(400);
+    startFireworks();
+};
+
+var hideGameOverOverlay = function() {
+    $('#gameOverOverlay').fadeOut(200);
+    stopFireworks();
+};
+
+// Fireworks animation (simple)
+var fireworksInterval;
+function startFireworks() {
+    var canvas = document.getElementById('fireworksCanvas');
+    var ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    var particles = [];
+    function randomColor() {
+        var colors = ['#ff5252','#ffd600','#69f0ae','#40c4ff','#b388ff','#ff4081'];
+        return colors[Math.floor(Math.random()*colors.length)];
+    }
+    function createParticle() {
+        var x = Math.random()*canvas.width;
+        var y = Math.random()*canvas.height*0.6;
+        var r = 2+Math.random()*3;
+        var color = randomColor();
+        var dx = (Math.random()-0.5)*6;
+        var dy = (Math.random()-1.2)*6;
+        var life = 60+Math.random()*30;
+        particles.push({x,y,r,color,dx,dy,life});
+    }
+    fireworksInterval = setInterval(function() {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        if (particles.length<80) for(var i=0;i<8;i++) createParticle();
+        for(var i=0;i<particles.length;i++) {
+            var p=particles[i];
+            ctx.beginPath();
+            ctx.arc(p.x,p.y,p.r,0,2*Math.PI);
+            ctx.fillStyle=p.color;
+            ctx.globalAlpha = Math.max(0,p.life/90);
+            ctx.fill();
+            p.x+=p.dx; p.y+=p.dy; p.dy+=0.08; p.life--;
+        }
+        particles=particles.filter(p=>p.life>0);
+        ctx.globalAlpha=1;
+    },30);
+}
+function stopFireworks() {
+    clearInterval(fireworksInterval);
+    var canvas = document.getElementById('fireworksCanvas');
+    if (canvas) {
+        var ctx = canvas.getContext('2d');
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+    }
+}
+
+// Fetch and display Stockfish evaluation for the current position
+function fetchAndDisplayEval() {
+    var fen = game.fen();
+    $.get('/eval/' + encodeURIComponent(fen) + '/', function(score) {
+        // If you have an evaluation bar, update it here
+        // Example: updateEvalBar(score);
+        // Or display the score somewhere in the UI
+        console.log('Stockfish eval:', score);
+    });
+}
+
+// --- Socket.IO real-time Stockfish debug integration ---
+var socket = null;
+var stockfishDebugStarted = false;
+$(document).on('click', '#debugToggleBtn', function() {
+    $('#debugPanel').slideToggle(180);
+    if ($('#debugPanel').is(':visible') && !stockfishDebugStarted) {
+        if (!socket) {
+            socket = io();
+        }
+        $('#debugOutput').val('');
+        socket.emit('start_stockfish_debug');
+        stockfishDebugStarted = true;
+        socket.on('debug_output', function(line) {
+            appendDebugOutput(line);
+        });
+    }
+});
+
+// Function to append text to the debug output textarea
+function appendDebugOutput(text) {
+    var $output = $('#debugOutput');
+    $output.val($output.val() + text + '\n');
+    $output.scrollTop($output[0].scrollHeight);
+}
+// Example usage: appendDebugOutput('Stockfish started...');

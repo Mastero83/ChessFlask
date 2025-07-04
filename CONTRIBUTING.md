@@ -13,4 +13,16 @@ Thank you for your interest in contributing!
 - Use clear, descriptive commit messages
 
 ## Questions?
-Open an issue or discussion and we'll be happy to help! 
+Open an issue or discussion and we'll be happy to help!
+
+## Guidelines
+- Ensure compatibility with Stockfish engine integration
+- Follow the new UI structure (top icon bar, accordion settings, debug panel)
+- Test changes with real-time Stockfish output and cheat panel
+- Document new features in README and release notes
+
+## Areas for Contribution
+- Engine/analysis improvements
+- UI/UX enhancements
+- Real-time features (SocketIO, debug, etc.)
+- Documentation and tutorials 
