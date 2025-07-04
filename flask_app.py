@@ -56,7 +56,7 @@ def openings_status(job_id):
 
 def process_pgn_job(job_id, pgn_data):
     import chess.pgn
-    max_games = 10
+    max_games = 1000
     games = []
     pgn_io = io.StringIO(pgn_data)
     count = 0
