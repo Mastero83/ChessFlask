@@ -197,7 +197,7 @@ var takeBack = function() {
         return;
     } else if (history.length === 1) {
         // Only one move to undo
-        game.undo();
+    game.undo();
     } else {
         // Always undo two moves (AI + player)
         game.undo();

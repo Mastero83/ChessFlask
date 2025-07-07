@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Library | ChessClub AI Assistant</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <style>
+        body {
+            min-height: 100vh;
+            font-family: 'Segoe UI', 'Arial', sans-serif;
+            background: linear-gradient(135deg, #e3e9f7 0%, #f5f7fa 40%, #b6c6e6 100%);
+            position: relative;
+            overflow-x: hidden;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.35;
+            background:
+                url('https://images.unsplash.com/photo-1517524285303-d6fc683dddf8?auto=format&fit=crop&w=1200&q=80') center center/cover no-repeat;
+            filter: grayscale(0.1) blur(0.5px) brightness(0.98);
+            animation: shimmer 12s linear infinite alternate;
+        }
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 0;
+            pointer-events: none;
+            background: repeating-linear-gradient(45deg, #e3e9f7cc 0 16px, transparent 16px 32px);
+            opacity: 0.13;
+        }
+        @keyframes shimmer {
+            0% { filter: grayscale(0.1) blur(0.5px) brightness(0.98) hue-rotate(0deg); }
+            100% { filter: grayscale(0.1) blur(0.5px) brightness(1.05) hue-rotate(10deg); }
+        }
+        .library-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            position: relative;
+            z-index: 1;
+        }
+        .library-card {
+            background: #fff;
+            border-radius: 24px;
+            box-shadow: 0 8px 32px #0002;
+            padding: 48px 32px 40px 32px;
+            margin: 32px 0;
+            text-align: center;
+            max-width: 900px;
+            width: 100%;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .library-title {
+            font-size: 2.2em;
+            font-weight: 800;
+            margin-bottom: 18px;
+            color: #1976d2;
+            letter-spacing: 1px;
+            text-shadow: 1px 2px 8px #b3c6e7;
+        }
+        #board {
+            margin: 0 auto 32px auto;
+            min-width: 320px;
+            min-height: 320px;
+            max-width: 480px;
+            max-height: 480px;
+        }
+        .library-table {
+            width: 100%;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px #1976d233;
+        }
+        .library-table-container {
+            width: 100%;
+            max-width: 900px;
+            overflow-x: auto;
+        }
+        .library-board-row {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 32px;
+            width: 100%;
+            max-width: 900px;
+        }
+        @media (max-width: 900px) {
+            .library-board-row {
+                flex-direction: column;
+                align-items: center;
+                gap: 18px;
+            }
+        }
+        .next-moves-panel {
+            background: #f5f7fa;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px #1976d211;
+            padding: 18px 22px;
+            min-width: 160px;
+            max-width: 220px;
+            margin-top: 8px;
+        }
+        .next-moves-title {
+            font-weight: 700;
+            color: #1976d2;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        .next-move-item {
+            font-size: 1.15em;
+            margin-bottom: 6px;
+            color: #333;
+            padding: 4px 0;
+        }
+        .next-moves-table {
+            background: #f5f7fa;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px #1976d211;
+            padding: 18px 22px;
+            min-width: 180px;
+            max-width: 260px;
+            margin-top: 8px;
+        }
+        .next-moves-table th, .next-moves-table td {
+            text-align: center;
+            font-size: 1.1em;
+        }
+        .highlight-dot {
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #1976d2cc 60%, transparent 70%);
+            pointer-events: none;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 3;
+        }
+        .highlight-dot[data-count]:after {
+            content: attr(data-count);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 0.85em;
+            font-weight: 700;
+            pointer-events: none;
+        }
+        .highlight-move-from {
+            box-shadow: 0 0 0 3px #ffd600cc !important;
+            z-index: 2;
+        }
+        .highlight-move-to {
+            box-shadow: 0 0 0 3px #1976d2cc !important;
+            z-index: 2;
+        }
+        .highlight-move-origin {
+            box-shadow: 0 0 0 3px #ff9800cc !important;
+            z-index: 2;
+        }
+    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='libs/chessboard/css/chessboard-0.3.0.css') }}">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="{{ url_for('static', filename='libs/chessboard/js/chessboard-0.3.0.min.js') }}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.js"></script>
+</head>
+<body>
+    <div class="library-container">
+        <div class="library-card">
+            <a href="/startup" class="btn btn-primary" style="position:absolute;left:32px;top:32px;font-size:1.15em;padding:10px 22px 10px 38px;border-radius:24px;font-weight:600;box-shadow:0 2px 8px #1976d233;z-index:2;">
+                <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:1.2em;">&#8592;</span>
+                Home
+            </a>
+            <div class="library-title">Chess Game Library</div>
+            <div id="openingSelectSection" style="margin-bottom:32px;">
+                <label for="openingSelect" style="font-size:1.15em;font-weight:600;margin-right:10px;">Select Opening:</label>
+                <select id="openingSelect" class="form-control" style="display:inline-block;width:auto;min-width:220px;"></select>
+            </div>
+            <div id="mainLibraryContent" style="display:none;">
+                <div class="library-board-row">
+                    <div style="position:relative;">
+                        <div id="board"></div>
+                        <button id="resetBoardBtn" class="btn btn-warning" style="margin-bottom:18px;">Reset Board</button>
+                        <button id="toggleTableBtn" class="btn btn-default" style="margin-bottom:18px;">Show Table & Search</button>
+                        <div id="boardOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></div>
+                    </div>
+                    <div class="next-moves-table">
+                        <div style="font-weight:700;color:#1976d2;margin-bottom:10px;">Next Moves in Library</div>
+                        <table class="table table-condensed" style="margin-bottom:0;">
+                            <thead><tr><th>Move</th><th>Count</th></tr></thead>
+                            <tbody id="nextMovesTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="tableSection" style="display:none;width:100%;">
+                    <div class="library-table-container">
+                        <div class="library-table">
+                            <table class="table table-striped table-condensed" style="width:100%;margin-bottom:0;">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Opening</th>
+                                        <th>White</th>
+                                        <th>Black</th>
+                                        <th>Date</th>
+                                        <th>Result</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+    var allGames = [];
+    var allGamesRaw = [];
+    function fetchOpeningsAndInit() {
+        $.getJSON('/openings_list', function(data) {
+            var select = $('#openingSelect');
+            select.empty();
+            select.append('<option value="">-- Select an Opening --</option>');
+            data.openings.forEach(function(opening) {
+                select.append('<option value="' + opening.replace(/"/g, '&quot;') + '">' + opening + '</option>');
+            });
+        });
+    }
+    $('#openingSelect').on('change', function() {
+        var opening = $(this).val();
+        if (!opening) {
+            $('#mainLibraryContent').hide();
+            allGames = [];
+            renderLibraryTable([]);
+            updateBoardOverlay();
+            return;
+        }
+        // Filter allGamesRaw for this opening
+        allGames = allGamesRaw.filter(function(g) { return g.opening === opening; });
+        renderLibraryTable(allGames);
+        $('#mainLibraryContent').show();
+        board.resize();
+        chess.reset();
+        board.position('start');
+        updateBoardOverlay();
+    });
+    var board = ChessBoard('board', {
+        draggable: true,
+        position: 'start',
+        pieceTheme: function(piece) {
+            return '/static/libs/chessboard/img/chesspieces/wikipedia/' + piece + '.png';
+        },
+        onDrop: onDrop
+    });
+    var chess = new Chess();
+    var firstMoveMade = false;
+    var tableVisible = false;
+    function showTable() {
+        if (!firstMoveMade) {
+            document.getElementById('tableSection').style.display = '';
+            firstMoveMade = true;
+        }
+    }
+    function getCurrentMoveHistoryUCI() {
+        // Returns array of UCI moves (e2e4, g1f3, etc) for current board
+        return chess.history({ verbose: true }).map(function(m) {
+            return m.from + m.to + (m.promotion ? m.promotion : '');
+        });
+    }
+    function renderLibraryTable(games) {
+        var tbody = $(".library-table tbody");
+        tbody.empty();
+        games.forEach(function(game, idx) {
+            var row = $('<tr></tr>');
+            row.append('<td>' + (idx + 1) + '</td>');
+            row.append('<td>' + (game.opening || game.headers.Opening || '') + '</td>');
+            row.append('<td>' + (game.headers.White || '') + '</td>');
+            row.append('<td>' + (game.headers.Black || '') + '</td>');
+            row.append('<td>' + (game.headers.Date || '') + '</td>');
+            row.append('<td>' + (game.headers.Result || '') + '</td>');
+            row.append('<td><button class="btn btn-info btn-sm load-btn" data-id="' + game.id + '" data-moves="' + game.moves.join(',') + '">Load</button></td>');
+            tbody.append(row);
+        });
+    }
+    function filterGamesByMoves() {
+        var moves = getCurrentMoveHistoryUCI();
+        var filtered = allGames.filter(function(g) {
+            if (moves.length === 0) return true;
+            for (var i = 0; i < moves.length; i++) {
+                if (g.moves[i] !== moves[i]) return false;
+            }
+            return true;
+        });
+        renderLibraryTable(filtered);
+        return filtered;
+    }
+    function getNextMovesInLibrary() {
+        var moves = getCurrentMoveHistoryUCI();
+        // Filter games to only those matching the current move sequence
+        var filtered = allGames.filter(function(g) {
+            if (moves.length === 0) return true;
+            for (var i = 0; i < moves.length; i++) {
+                if (g.moves[i] !== moves[i]) return false;
+            }
+            return true;
+        });
+        var nextMoves = {};
+        filtered.forEach(function(g) {
+            if (g.moves.length > moves.length) {
+                var next = g.moves[moves.length];
+                if (next) nextMoves[next] = (nextMoves[next] || 0) + 1;
+            }
+        });
+        // Return as array of {move, count}
+        return Object.entries(nextMoves).map(function(e) { return {move: e[0], count: e[1]}; });
+    }
+    function getSquaresBetween(from, to) {
+        // Returns array of squares between from and to (exclusive), only for straight lines
+        var files = 'abcdefgh';
+        var f1 = files.indexOf(from[0]), r1 = parseInt(from[1]);
+        var f2 = files.indexOf(to[0]), r2 = parseInt(to[1]);
+        var squares = [];
+        if (f1 === f2) { // same file
+            var step = r2 > r1 ? 1 : -1;
+            for (var r = r1 + step; r !== r2; r += step) squares.push(from[0] + r);
+        } else if (r1 === r2) { // same rank
+            var step = f2 > f1 ? 1 : -1;
+            for (var f = f1 + step; f !== f2; f += step) squares.push(files[f] + from[1]);
+        } else if (Math.abs(f2 - f1) === Math.abs(r2 - r1)) { // diagonal
+            var fStep = f2 > f1 ? 1 : -1, rStep = r2 > r1 ? 1 : -1;
+            var f = f1 + fStep, r = r1 + rStep;
+            while (f !== f2 && r !== r2) { squares.push(files[f] + r); f += fStep; r += rStep; }
+        }
+        return squares;
+    }
+    function updateBoardOverlay() {
+        // Remove all previous highlights
+        $('.highlight-dot').remove();
+        $('.highlight-move-from').removeClass('highlight-move-from');
+        $('.highlight-move-to').removeClass('highlight-move-to');
+        $('.highlight-move-origin').removeClass('highlight-move-origin');
+        var nextMoves = getNextMovesInLibrary();
+        var overlay = document.getElementById('boardOverlay');
+        overlay.innerHTML = '';
+        // Update next moves table
+        var tableBody = document.getElementById('nextMovesTableBody');
+        tableBody.innerHTML = '';
+        nextMoves.sort(function(a, b) { return b.count - a.count; });
+        nextMoves.forEach(function(m) {
+            var row = document.createElement('tr');
+            row.innerHTML = '<td>' + m.move + '</td><td>' + m.count + '</td>';
+            tableBody.appendChild(row);
+        });
+        if (nextMoves.length === 0) return;
+        // Visual highlights
+        nextMoves.forEach(function(m) {
+            var from = m.move.slice(0, 2);
+            var to = m.move.slice(2, 4);
+            var fromSq = $('[data-square="' + from + '"]');
+            var toSq = $('[data-square="' + to + '"]');
+            fromSq.addClass('highlight-move-origin');
+            toSq.addClass('highlight-move-to');
+            // Dots between from and to
+            getSquaresBetween(from, to).forEach(function(sq) {
+                var square = $('[data-square="' + sq + '"]');
+                if (square.length) {
+                    var dot = document.createElement('div');
+                    dot.className = 'highlight-dot';
+                    dot.style.background = 'radial-gradient(circle, #ffd600cc 60%, transparent 70%)';
+                    square[0].appendChild(dot);
+                }
+            });
+            // Dot on destination with count
+            if (toSq.length) {
+                var dot = document.createElement('div');
+                dot.className = 'highlight-dot';
+                dot.setAttribute('data-count', m.count);
+                toSq[0].appendChild(dot);
+            }
+        });
+        // Highlight last move
+        var history = chess.history({ verbose: true });
+        if (history.length > 0) {
+            var last = history[history.length-1];
+            var fromSq = $('[data-square="' + last.from + '"]');
+            var toSq = $('[data-square="' + last.to + '"]');
+            fromSq.addClass('highlight-move-from');
+            toSq.addClass('highlight-move-to');
+        }
+    }
+    function onDrop(source, target) {
+        var move = chess.move({ from: source, to: target, promotion: 'q' });
+        if (move === null) return 'snapback';
+        board.position(chess.fen());
+        filterGamesByMoves();
+        updateBoardOverlay();
+    }
+    $('#resetBoardBtn').on('click', function() {
+        chess.reset();
+        board.position('start');
+        renderLibraryTable(allGames);
+        updateBoardOverlay();
+    });
+    $('#toggleTableBtn').on('click', function() {
+        tableVisible = !tableVisible;
+        document.getElementById('tableSection').style.display = tableVisible ? '' : 'none';
+        this.textContent = tableVisible ? 'Hide Table & Search' : 'Show Table & Search';
+    });
+    // Patch: on page load, only load allGamesRaw, and don't show board until opening is selected
+    $(function() {
+        allGamesRaw = [];
+        {% for game in all_games %}
+        allGamesRaw.push({
+            id: "{{ game.id }}",
+            moves: {{ game.moves|tojson }},
+            opening: {{ game.opening|tojson }},
+            headers: {{ game.headers|tojson }}
+        });
+        {% endfor %}
+        fetchOpeningsAndInit();
+        $('#mainLibraryContent').hide();
+    });
+    // Placeholder: Load button will eventually load the game
+    $('.load-btn').on('click', function() {
+        alert('Load game with ID: ' + $(this).data('id'));
+        // TODO: Implement loading the game and displaying moves on the board
+    });
+    </script>
+</body>
+</html> 

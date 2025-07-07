@@ -10,6 +10,8 @@ import time
 import uuid
 from flask_socketio import SocketIO, emit
 import subprocess
+from pymongo import MongoClient
+import chess.pgn
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
@@ -17,10 +19,29 @@ app.secret_key = 'chessflask_secret_key'
 
 # In-memory PGN job storage
 pgn_jobs = {}
+pgn_jobs_library = {}
 
-@app.route('/')
+# MongoDB setup
+mongo_client = MongoClient('localhost', 27017)
+db = mongo_client['chessclub']
+users_collection = db['users']
+library_collection = db['library_games']
+
+@app.route('/', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        session['username'] = username
+        # Store user in MongoDB if not already present
+        if username and not users_collection.find_one({'username': username}):
+            users_collection.insert_one({'username': username})
+        return redirect(url_for('startup'))
+    return render_template('login.html')
+
+@app.route('/startup')
 def startup():
-    return render_template("startup.html")
+    username = session.get('username')
+    return render_template("startup.html", username=username)
 
 @app.route('/play')
 def play():
@@ -216,6 +237,146 @@ def analyze_game():
             score = 0
         evals.append(score)
     return jsonify({'evals': evals})
+
+@app.route('/upload', methods=['GET'])
+def upload():
+    return render_template('upload.html')
+
+@app.route('/process_pgn', methods=['POST'])
+def process_pgn():
+    file = request.files.get('pgnfile')
+    if not file:
+        return jsonify({'error': 'No file uploaded'}), 400
+    pgn_data = file.read().decode('utf-8')
+    job_id = str(uuid.uuid4())
+    pgn_jobs_library[job_id] = {
+        'progress': 0,
+        'total_games': 0,
+        'invalid_first_move': 0,
+        'valid_games_count': 0,
+        'done': False,
+        'error': None
+    }
+    def process_job():
+        try:
+            import chess.pgn
+            import io
+            pgn_io = io.StringIO(pgn_data)
+            total_games = 0
+            invalid_first_move = 0
+            valid_games = []
+            while True:
+                game = chess.pgn.read_game(pgn_io)
+                if game is None:
+                    break
+                total_games += 1
+                node = game
+                moves = []
+                while node.variations:
+                    node = node.variations[0]
+                    moves.append(node.uci())
+                if not moves:
+                    invalid_first_move += 1
+                    continue
+                game_dict = {
+                    'headers': dict(game.headers),
+                    'moves': moves
+                }
+                valid_games.append(game_dict)
+                # Update progress every 10 games
+                if total_games % 10 == 0:
+                    pgn_jobs_library[job_id]['progress'] = int((total_games / (total_games + 1)) * 100)
+                    pgn_jobs_library[job_id]['total_games'] = total_games
+                    pgn_jobs_library[job_id]['invalid_first_move'] = invalid_first_move
+                    pgn_jobs_library[job_id]['valid_games_count'] = len(valid_games)
+            # Final update
+            pgn_jobs_library[job_id]['progress'] = 100
+            pgn_jobs_library[job_id]['total_games'] = total_games
+            pgn_jobs_library[job_id]['invalid_first_move'] = invalid_first_move
+            pgn_jobs_library[job_id]['valid_games_count'] = len(valid_games)
+            pgn_jobs_library[job_id]['valid_games'] = valid_games
+            pgn_jobs_library[job_id]['done'] = True
+        except Exception as e:
+            pgn_jobs_library[job_id]['error'] = str(e)
+            pgn_jobs_library[job_id]['done'] = True
+    threading.Thread(target=process_job, daemon=True).start()
+    return jsonify({'job_id': job_id})
+
+@app.route('/pgn_progress/<job_id>')
+def pgn_progress(job_id):
+    job = pgn_jobs_library.get(job_id)
+    if not job:
+        return jsonify({'error': 'Job not found'}), 404
+    # Don't send all games until done
+    resp = {
+        'progress': job['progress'],
+        'total_games': job['total_games'],
+        'invalid_first_move': job['invalid_first_move'],
+        'valid_games_count': job['valid_games_count'],
+        'done': job['done'],
+        'error': job['error']
+    }
+    if job.get('done') and 'valid_games' in job:
+        resp['valid_games'] = job['valid_games']
+    return jsonify(resp)
+
+@app.route('/save_to_library', methods=['POST'])
+def save_to_library():
+    data = request.get_json()
+    opening = data.get('opening')
+    games = data.get('games')
+    debug = {}
+    if not games:
+        return jsonify({'error': 'No games to save'}), 400
+    # Save each game as a document with the opening
+    docs = []
+    for g in games:
+        doc = {
+            'opening': opening,
+            'headers': g.get('headers', {}),
+            'moves': g.get('moves', [])
+        }
+        docs.append(doc)
+    result = library_collection.insert_many(docs)
+    debug['inserted_ids'] = [str(_id) for _id in result.inserted_ids]
+    debug['count'] = len(result.inserted_ids)
+    return jsonify({'status': 'ok', 'debug': debug})
+
+@app.route('/library')
+def library():
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 10))
+    search = request.args.get('search', '').strip()
+    query = {}
+    if search:
+        regex = {'$regex': search, '$options': 'i'}
+        query = {'$or': [
+            {'opening': regex},
+            {'headers.White': regex},
+            {'headers.Black': regex},
+            {'headers.Date': regex},
+            {'headers.Result': regex},
+            {'headers.Event': regex},
+            {'headers.Site': regex},
+        ]}
+    total_games = library_collection.count_documents(query)
+    games = list(library_collection.find(query, {'_id': 1, 'headers': 1, 'opening': 1, 'moves': 1})
+                .skip((page-1)*per_page).limit(per_page))
+    for g in games:
+        g['id'] = str(g['_id'])
+    # Get all matching games for move logic and next-move panel
+    all_games = list(library_collection.find(query, {'_id': 1, 'headers': 1, 'opening': 1, 'moves': 1}))
+    for g in all_games:
+        g['id'] = str(g['_id'])
+    return render_template('library.html', games=games, all_games=all_games, page=page, per_page=per_page, total_games=total_games, search=search)
+
+@app.route('/openings_list')
+def openings_list():
+    # Return all unique opening names in the library
+    openings = library_collection.distinct('opening')
+    openings = [o for o in openings if o]  # Remove empty/null
+    openings.sort()
+    return jsonify({'openings': openings})
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)

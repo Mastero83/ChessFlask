@@ -33,6 +33,8 @@ body {
 #moveTable {
     width: 100%;
     max-height: 220px;
+    min-height: 120px;
+    height: 180px;
     overflow-y: auto;
     margin-bottom: 18px;
     background: #fff;
@@ -220,4 +222,17 @@ body {
     background: radial-gradient(circle, #8fd19e 60%, #eafff0 100%) !important;
     box-shadow: 0 0 8px 2px #8fd19e99;
     z-index: 2;
+}
+
+.chessboard-piece, .piece-417db {
+    opacity: 1 !important;
+    visibility: visible !important;
+    z-index: 1000 !important;
+    pointer-events: auto !important;
+}
+.chessboard-piece.dragging, .piece-417db.dragging {
+    opacity: 0.85 !important;
+    visibility: visible !important;
+    z-index: 1001 !important;
+    pointer-events: none !important;
 }

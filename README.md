@@ -6,10 +6,10 @@ ChessFlask is the ultimate modern chess web app for players, club enthusiasts, a
 ---
 
 ## ✨ Features
+- **Modern Home, Play, and Login Screens**: Redesigned with gradients, card layouts, and chess-themed backgrounds for a beautiful, consistent experience.
 - **Stockfish-Powered Play & Analysis**: Every move, hint, and analysis is backed by the world's strongest chess engine.
-- **Modern Home Screen**: Choose to play as White, Black, analyze a game, or learn openings—all from a stunning, intuitive start page.
-- **Player vs AI or Player vs Player**: Play against Stockfish or use analysis mode to review your own games, move by move.
-- **Cheat Mode "God Slider"**: Instantly see the best moves at any depth (1–20) with a beautiful slider—perfect for learning or "cheating."
+- **Cheat Panel with Depth Slider**: Instantly see the best moves at any depth (1–20) with a compact, toggleable cheat panel—perfect for learning or "cheating." Now with improved UI and slider placement.
+- **MongoDB-Backed Game Library**: Upload PGN files, filter/search games, and save to your personal library with statistics and opening selection. Requires MongoDB for full functionality.
 - **Move Navigation**: Step through your game with first/last/next/previous controls and a move number field.
 - **Accuracy Boxes**: After each game, see your accuracy (and your opponent's) in gorgeous, color-coded summary boxes—just like chess.com, but better.
 - **Game Summary Table**: Instantly see how many brilliants, bests, goods, inaccuracies, mistakes, and blunders you made, split by color, with emoticons.
@@ -17,7 +17,7 @@ ChessFlask is the ultimate modern chess web app for players, club enthusiasts, a
 - **Real-Time Stockfish Debug Panel**: See engine output live for the ultimate chess nerd experience.
 - **AI Assistant**: Get fun, real-time commentary on every move.
 - **Import/Export PGN**: Edit, import, and download PGN at any time.
-- **No Database, No Docker**: Everything runs in memory for instant setup and blazing speed.
+- **No Docker Required**: Everything runs locally for instant setup and blazing speed.
 
 ---
 
@@ -28,11 +28,12 @@ ChessFlask is the ultimate modern chess web app for players, club enthusiasts, a
    ```sh
    python -m pip install -r requirements.txt
    ```
-4. **Run the app:**
+4. **(Optional) Set up MongoDB** for the game library features
+5. **Run the app:**
    ```sh
    python flask_app.py
    ```
-5. **Open** [http://127.0.0.1:5000/](http://127.0.0.1:5000/)
+6. **Open** [http://127.0.0.1:5000/](http://127.0.0.1:5000/)
 
 ---
 
@@ -41,6 +42,8 @@ ChessFlask is the ultimate modern chess web app for players, club enthusiasts, a
   ![Gameplay Example](releaseNotes/Gameplay%20early.png)
 - **Openings Analysis:**
   ![Openings Analysis](releaseNotes/Analyse%20openings.png)
+- **Cheat Panel:**
+  <!-- Add a screenshot of the new cheat panel UI here -->
 - **Game Over Summary:**
   ![Game Over Summary](releaseNotes/Analyse%20openings.png)
 

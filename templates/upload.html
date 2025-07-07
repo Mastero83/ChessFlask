@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload Games | ChessClub AI Assistant</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <style>
+        body {
+            min-height: 100vh;
+            font-family: 'Segoe UI', 'Arial', sans-serif;
+            background: linear-gradient(135deg, #e3e9f7 0%, #f5f7fa 40%, #b6c6e6 100%);
+            position: relative;
+            overflow-x: hidden;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.35;
+            background:
+                url('https://images.unsplash.com/photo-1517524285303-d6fc683dddf8?auto=format&fit=crop&w=1200&q=80') center center/cover no-repeat;
+            filter: grayscale(0.1) blur(0.5px) brightness(0.98);
+            animation: shimmer 12s linear infinite alternate;
+        }
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 0;
+            pointer-events: none;
+            background: repeating-linear-gradient(45deg, #e3e9f7cc 0 16px, transparent 16px 32px);
+            opacity: 0.13;
+        }
+        @keyframes shimmer {
+            0% { filter: grayscale(0.1) blur(0.5px) brightness(0.98) hue-rotate(0deg); }
+            100% { filter: grayscale(0.1) blur(0.5px) brightness(1.05) hue-rotate(10deg); }
+        }
+        .upload-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            position: relative;
+            z-index: 1;
+        }
+        .upload-card {
+            background: #fff;
+            border-radius: 24px;
+            box-shadow: 0 8px 32px #0002;
+            padding: 48px 40px 40px 40px;
+            margin: 32px 0;
+            text-align: center;
+            max-width: 480px;
+            width: 100%;
+            position: relative;
+        }
+        .upload-title {
+            font-size: 2.2em;
+            font-weight: 800;
+            margin-bottom: 18px;
+            color: #1976d2;
+            letter-spacing: 1px;
+            text-shadow: 1px 2px 8px #b3c6e7;
+        }
+        .upload-form {
+            margin-top: 18px;
+            margin-bottom: 0;
+        }
+        .upload-form input[type="file"] {
+            margin-bottom: 18px;
+        }
+        .upload-form button {
+            width: 100%;
+            font-size: 1.2em;
+            padding: 14px 0;
+            border-radius: 8px;
+            background: linear-gradient(90deg, #1976d2 60%, #64b5f6 100%);
+            color: #fff;
+            font-weight: 700;
+            border: none;
+            box-shadow: 0 2px 8px #1976d233;
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        .upload-form button:hover {
+            background: #1356a2;
+            box-shadow: 0 4px 16px #1976d233;
+        }
+        .progress {
+            margin-top: 18px;
+            height: 24px;
+        }
+        .progress-bar {
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+        .upload-stats {
+            margin-top: 24px;
+            font-size: 1.1em;
+            color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <div class="upload-container">
+        <div class="upload-card">
+            <div class="upload-title">Upload Games to Library</div>
+            <form class="upload-form" id="pgnUploadForm" enctype="multipart/form-data" method="POST">
+                <input type="file" name="pgnfile" accept=".pgn" required>
+                <button type="submit">Process</button>
+            </form>
+            <div id="progressSection" style="display:none;">
+                <div class="progress">
+                    <div id="progressBar" class="progress-bar progress-bar-info" role="progressbar" style="width:0%">0%</div>
+                </div>
+                <div id="progressText" style="margin-top:10px;color:#1976d2;font-weight:600;"></div>
+            </div>
+            <div id="statsSection" class="upload-stats" style="display:none;"></div>
+            <div id="nextSection" style="display:none;">
+                <input type="text" id="openingField" class="form-control" placeholder="Opening">
+                <button id="saveToLibraryBtn" class="btn btn-success" style="margin-top:14px;width:100%;font-size:1.1em;">Save to Library</button>
+            </div>
+            <div id="loadingSection" style="display:none;margin-top:18px;color:#888;font-size:1.1em;"></div>
+        </div>
+    </div>
+    <script>
+    // Real-time progress polling for PGN upload and processing
+    document.getElementById('pgnUploadForm').onsubmit = function(e) {
+        e.preventDefault();
+        var form = e.target;
+        var fileInput = form.querySelector('input[type="file"]');
+        var file = fileInput.files[0];
+        if (!file) return;
+        var formData = new FormData();
+        formData.append('pgnfile', file);
+        document.getElementById('progressSection').style.display = '';
+        var bar = document.getElementById('progressBar');
+        var text = document.getElementById('progressText');
+        bar.style.width = '0%';
+        bar.textContent = '0%';
+        text.textContent = 'Uploading...';
+        document.getElementById('statsSection').style.display = 'none';
+        document.getElementById('nextSection').style.display = 'none';
+        document.getElementById('loadingSection').style.display = 'none';
+        // Start upload and get job_id
+        fetch('/process_pgn', {
+            method: 'POST',
+            body: formData
+        }).then(r => r.json()).then(function(data) {
+            if (!data.job_id) {
+                text.textContent = 'Error: ' + (data.error || 'No job_id returned');
+                return;
+            }
+            text.textContent = 'Processing...';
+            pollProgress(data.job_id);
+        }).catch(function(err) {
+            text.textContent = 'Error: ' + err;
+        });
+        function pollProgress(job_id) {
+            fetch('/pgn_progress/' + job_id)
+                .then(r => r.json())
+                .then(function(data) {
+                    if (data.error) {
+                        text.textContent = 'Error: ' + data.error;
+                        return;
+                    }
+                    bar.style.width = data.progress + '%';
+                    bar.textContent = data.progress + '%';
+                    text.textContent = 'Processing... ' + data.progress + '%';
+                    document.getElementById('statsSection').style.display = '';
+                    document.getElementById('statsSection').textContent = 'Games: ' + data.total_games + ' | Invalid first moves: ' + data.invalid_first_move;
+                    if (!data.done) {
+                        setTimeout(function() { pollProgress(job_id); }, 500);
+                    } else {
+                        text.textContent = 'Processing complete!';
+                        document.getElementById('nextSection').style.display = '';
+                        window._validGames = data.valid_games;
+                        window._validGamesAll = data.valid_games_count;
+                    }
+                })
+                .catch(function(err) {
+                    text.textContent = 'Error: ' + err;
+                });
+        }
+    };
+    document.getElementById('saveToLibraryBtn').onclick = function() {
+        var opening = document.getElementById('openingField').value;
+        var games = window._validGames || [];
+        if (!opening || !games.length) return;
+        document.getElementById('loadingSection').style.display = '';
+        document.getElementById('loadingSection').textContent = 'Saving to MongoDB...';
+        fetch('/save_to_library', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ opening: opening, games: games })
+        }).then(r => r.json()).then(function(data) {
+            document.getElementById('loadingSection').textContent = 'Saved! Debug: ' + JSON.stringify(data.debug);
+        }).catch(function(err) {
+            document.getElementById('loadingSection').textContent = 'Error: ' + err;
+        });
+    };
+    </script>
+</body>
+</html> 
