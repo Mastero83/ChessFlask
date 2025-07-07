@@ -2,13 +2,14 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>ChessBot</title>
+        <title>ChessClub AI Assistant</title>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.10.1/bootstrap-table.min.js"></script>
 
         <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></link>
         <link rel="stylesheet" href="{{ url_for('static', filename='libs/chessboard/css/chessboard-0.3.0.css') }}"></link>
         <link rel="shortcut icon" href="{{ url_for('static', filename='rook_favicon.ico') }}">
+        <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
         <!-- Latest compiled and minified CSS -->
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
               integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
@@ -22,7 +23,10 @@
         integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.js"></script>
-        <script type="text/javascript"> $SCRIPT_ROOT = {{ request.script_root|tojson|safe }}; </script>
+        <script type="text/javascript">
+            var $SCRIPT_ROOT = "{{ request.script_root|tojson|safe }}";
+            var initialPlayerColor = "{{ color|default('white') }}";
+        </script>
         <script type="text/javascript" src="{{ url_for('static',filename='libs/chessboard/js/chessboard-0.3.0.js') }}"></script>
         <script type="text/javascript" src="{{ url_for('static',filename='libs/chessboard/js/chessboard-0.3.0.min.js') }}"></script>
         <script type="text/javascript" src="{{ url_for('static',filename='scripts.js') }}"></script>
@@ -31,7 +35,7 @@
     <body>
         <nav class="navbar navbar-default navbar-fixed-top">
           <div class="container-fluid">
-              <h1 id="logo" style="font-family: 'Segoe UI', 'Arial', sans-serif; font-weight: 800; font-size: 2.4em; color: #1976d2; letter-spacing: 1px; text-shadow: 1px 2px 8px #b3c6e7;">ChessFlask: <span style="color:#388e3c;">Mastermind Arena</span></h1>
+              <h1 id="logo" style="font-family: 'Segoe UI', 'Arial', sans-serif; font-weight: 800; font-size: 2.4em; color: #1976d2; letter-spacing: 1px; text-shadow: 1px 2px 8px #b3c6e7;">ChessClub AI Assistant</h1>
           </div>
         </nav>
         <div class="container">

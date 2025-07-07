@@ -24,7 +24,8 @@ def startup():
 
 @app.route('/play')
 def play():
-    return render_template("index.html")
+    color = request.args.get('color', 'white')
+    return render_template("index.html", color=color)
 
 @app.route('/openings', methods=['GET', 'POST'])
 def openings():

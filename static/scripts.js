@@ -45,6 +45,7 @@ var onDrop = function(source, target) {
   if (playMode !== 'analysis') {
     getResponseMove();
   }
+  removeHighlights(); // Clear all highlights after a move
 };
 
 // update the board position after the piece snap
@@ -190,8 +191,16 @@ var setStatus = function(status) {
 }
 
 var takeBack = function() {
-    game.undo();
-    if (game.turn() != "w") {
+    var history = game.history();
+    if (history.length === 0) {
+        // No moves to undo
+        return;
+    } else if (history.length === 1) {
+        // Only one move to undo
+        game.undo();
+    } else {
+        // Always undo two moves (AI + player)
+        game.undo();
         game.undo();
     }
     board.position(game.fen());
@@ -203,7 +212,8 @@ function getUrlParam(name) {
     return results ? decodeURIComponent(results[1]) : null;
 }
 
-var playerColor = getUrlParam('color') || 'white';
+var initialPlayerColor = getUrlParam('color');
+var playerColor = typeof initialPlayerColor !== 'undefined' ? initialPlayerColor : (getUrlParam('color') || 'white');
 var playMode = getUrlParam('mode') || 'cpu'; // 'cpu' or 'analysis'
 
 var newGame = function() {
