@@ -367,7 +367,7 @@
         nextMoves.sort(function(a, b) { return b.count - a.count; });
         nextMoves.forEach(function(m) {
             var row = document.createElement('tr');
-            row.innerHTML = '<td>' + m.move + '</td><td>' + m.count + '</td>';
+            row.innerHTML = '<td><a href="#" class="next-move-link" data-move="' + m.move + '">' + m.move + '</a></td><td>' + m.count + '</td>';
             tableBody.appendChild(row);
         });
         if (nextMoves.length === 0) return;
@@ -439,10 +439,35 @@
         fetchOpeningsAndInit();
         $('#mainLibraryContent').hide();
     });
-    // Placeholder: Load button will eventually load the game
-    $('.load-btn').on('click', function() {
-        alert('Load game with ID: ' + $(this).data('id'));
-        // TODO: Implement loading the game and displaying moves on the board
+    // Load button: store PGN in localStorage and redirect to play page
+    $(document).on('click', '.load-btn', function() {
+        var gameId = $(this).data('id');
+        var game = allGames.find(function(g) { return g.id === gameId; });
+        if (!game) return;
+        // Build PGN from moves and headers
+        var headers = game.headers || {};
+        var pgn = '';
+        Object.keys(headers).forEach(function(key) {
+            if (headers[key]) pgn += '[' + key + ' "' + headers[key] + '"]\n';
+        });
+        pgn += '\n';
+        var chessTmp = new Chess();
+        (game.moves || []).forEach(function(m) { if (m) chessTmp.move(m, { sloppy: true }); });
+        pgn += chessTmp.pgn();
+        localStorage.setItem('importedPGN', pgn);
+        window.location.href = '/play';
+    });
+    // Add click handler for next move links
+    $(document).on('click', '.next-move-link', function(e) {
+        e.preventDefault();
+        var moveUci = $(this).data('move');
+        var moveObj = { from: moveUci.slice(0,2), to: moveUci.slice(2,4) };
+        if (moveUci.length > 4) moveObj.promotion = moveUci.slice(4);
+        var move = chess.move(moveObj);
+        if (move) {
+            board.position(chess.fen());
+            updateBoardOverlay();
+        }
     });
     </script>
 </body>

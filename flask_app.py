@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request, redirect, url_for, send_file, session
+from flask import Flask, render_template, jsonify, request, redirect, url_for, send_file, session, g
 from chess_engine import *
 from chess_engine import StockfishEngine
 import chess
@@ -26,12 +26,53 @@ mongo_client = MongoClient('localhost', 27017)
 db = mongo_client['chessclub']
 users_collection = db['users']
 library_collection = db['library_games']
+sessions_collection = db['sessions']
+
+import functools
+
+def get_session_id():
+    if 'session_id' not in session:
+        session['session_id'] = str(uuid.uuid4())
+    return session['session_id']
+
+def log_page_visit(endpoint):
+    session_id = get_session_id()
+    username = session.get('username')
+    now = time.time()
+    page = request.path
+    sessions_collection.update_one(
+        {'session_id': session_id},
+        {'$push': {'pages_visited': {'page': page, 'endpoint': endpoint, 'timestamp': now}},
+         '$setOnInsert': {'username': username, 'session_id': session_id, 'start_time': now}},
+        upsert=True
+    )
+
+def end_session():
+    session_id = session.get('session_id')
+    if not session_id:
+        return
+    now = time.time()
+    sess = sessions_collection.find_one({'session_id': session_id})
+    if sess and 'start_time' in sess:
+        duration = now - sess['start_time']
+        sessions_collection.update_one(
+            {'session_id': session_id},
+            {'$set': {'end_time': now, 'duration': duration}}
+        )
+    session.pop('session_id', None)
+    session.pop('username', None)
+
+@app.before_request
+def before_request():
+    if request.endpoint not in ('static',):
+        log_page_visit(request.endpoint)
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form.get('username')
         session['username'] = username
+        get_session_id()  # ensure session_id is set
         # Store user in MongoDB if not already present
         if username and not users_collection.find_one({'username': username}):
             users_collection.insert_one({'username': username})
@@ -377,6 +418,11 @@ def openings_list():
     openings = [o for o in openings if o]  # Remove empty/null
     openings.sort()
     return jsonify({'openings': openings})
+
+@app.route('/logoff')
+def logoff():
+    end_session()
+    return redirect(url_for('login'))
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)

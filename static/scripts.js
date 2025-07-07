@@ -350,25 +350,6 @@ function aiCommentOnMove(move) {
 var cheatPreviewBackup = null;
 
 $(document).ready(function() {
-    // Render eval bar HTML inside container
-    $("#evalBarContainer").html(
-        '<div id="evalBar">' +
-        '<div id="evalBarWhite"></div>' +
-        '<div id="evalBarBlack"></div>' +
-        '<div id="evalBarMarker"></div>' +
-        '</div>'
-    );
-    // Toggle eval bar (now in controls panel)
-    $(document).on('change', '#toggleEvalBar', function() {
-        if ($(this).is(':checked')) {
-            $('#evalBarContainer').removeClass('eval-bar-hidden');
-        } else {
-            $('#evalBarContainer').addClass('eval-bar-hidden');
-        }
-    });
-    // Default: show
-    $('#evalBarContainer').removeClass('eval-bar-hidden');
-
     // Initialize the chess board only if #board exists
     if ($('#board').length > 0) {
         board = ChessBoard('board', cfg);
@@ -555,23 +536,6 @@ $(document).ready(function() {
             localStorage.removeItem('importedPGN');
         }
     }
-
-    // Hide eval bar by default
-    if (!$('#toggleEvalBar').is(':checked')) {
-        $('#evalBarContainer').hide();
-    }
-    $('#toggleEvalBar').change(function() {
-        if ($(this).is(':checked')) {
-            $('#evalBarContainer').show();
-        } else {
-            $('#evalBarContainer').hide();
-        }
-    });
-
-    $('#gameOverNewGame').click(function() {
-        hideGameOverOverlay();
-        newGame();
-    });
 
     // Auto-expand metaPanel accordion if importedPGN is set
     if (window.location.pathname === '/play' && localStorage.getItem('importedPGN')) {

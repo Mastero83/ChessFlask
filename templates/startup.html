@@ -43,8 +43,9 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            min-height: 100vh;
+            justify-content: flex-start;
+            min-height: 100dvh;
+            padding-top: 2dvh;
             position: relative;
             z-index: 1;
         }
@@ -53,7 +54,7 @@
             border-radius: 24px;
             box-shadow: 0 8px 32px #0002;
             padding: 48px 40px 40px 40px;
-            margin: 32px 0;
+            margin: 8px 0;
             text-align: center;
             max-width: 440px;
             width: 100%;
@@ -62,7 +63,8 @@
         .startup-title {
             font-size: 2.6em;
             font-weight: 800;
-            margin-bottom: 16px;
+            margin-top: 0;
+            margin-bottom: 4px;
             color: #1976d2;
             letter-spacing: 1px;
             text-shadow: 1px 2px 8px #b3c6e7;
@@ -153,16 +155,16 @@
                 <a href="{{ url_for('play') }}?color=black" class="btn startup-btn startup-btn-black">
                     <span class="startup-chess-icon">&#9818;</span> Play as Black
                 </a>
-                <a href="{{ url_for('openings') }}" class="btn startup-btn startup-btn-openings">
+                <!-- <a href="{{ url_for('openings') }}" class="btn startup-btn startup-btn-openings">
                     <span class="glyphicon glyphicon-education"></span> Analyse and Learn Openings
-                </a>
+                </a> -->
                 <a href="#" class="btn startup-btn startup-btn-analyse" style="opacity:0.7; cursor:not-allowed;">
                     <span class="glyphicon glyphicon-search"></span> Analyse a Game (Coming Soon)
                 </a>
-                <a href="{{ url_for('upload') }}" class="btn startup-btn startup-btn-upload" style="background:linear-gradient(90deg,#1976d2 60%,#64b5f6 100%);color:#fff;border:2px solid #1976d2;">
+                <a href="{{ url_for('upload') }}" class="btn startup-btn startup-btn-upload">
                     <span class="glyphicon glyphicon-upload"></span> Upload games to Library
                 </a>
-                <a href="{{ url_for('library') }}" class="btn startup-btn startup-btn-library" style="background:linear-gradient(90deg,#388e3c 60%,#81c784 100%);color:#fff;border:2px solid #388e3c;">
+                <a href="{{ url_for('library') }}" class="btn startup-btn startup-btn-library">
                     <span class="glyphicon glyphicon-book"></span> Library
                 </a>
             </div>
