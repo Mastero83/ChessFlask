@@ -18,6 +18,7 @@ ChessFlask is the ultimate modern chess web app for players, club enthusiasts, a
 - **AI Assistant**: Get fun, real-time commentary on every move.
 - **Import/Export PGN**: Edit, import, and download PGN at any time.
 - **No Docker Required**: Everything runs locally for instant setup and blazing speed.
+- **Consistent Sidebar Menu & Topbar**: Navigate easily with a modern sidebar menu and topbar, now available on all main pages for a seamless experience.
 
 ---
 

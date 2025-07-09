@@ -12,6 +12,7 @@ from flask_socketio import SocketIO, emit
 import subprocess
 from pymongo import MongoClient
 import chess.pgn
+# Remove Flask-Menu imports and usage
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
@@ -79,15 +80,29 @@ def login():
         return redirect(url_for('startup'))
     return render_template('login.html')
 
+# Remove Flask-Menu imports and usage
+
+MENU_ITEMS = [
+    {'name': 'Home', 'url': '/startup'},
+    {'name': 'Play', 'url': '/play'},
+    {'name': 'Library', 'url': '/library'},
+    {'name': 'Upload', 'url': '/upload'},
+    {'name': 'Analysis (Placeholder)', 'url': '/analysis'},
+    {'name': 'Annotate (Placeholder)', 'url': '/annotate'},
+    {'name': 'Record/Film (Placeholder)', 'url': '/record'},
+    {'name': 'Chess Club (Placeholder)', 'url': '/club'},
+    {'name': 'Submit Ideas (Placeholder)', 'url': '/ideas'},
+]
+
 @app.route('/startup')
 def startup():
     username = session.get('username')
-    return render_template("startup.html", username=username)
+    return render_template("startup.html", username=username, menu_items=MENU_ITEMS)
 
 @app.route('/play')
 def play():
     color = request.args.get('color', 'white')
-    return render_template("index.html", color=color)
+    return render_template("index.html", color=color, menu_items=MENU_ITEMS)
 
 @app.route('/openings', methods=['GET', 'POST'])
 def openings():
@@ -279,9 +294,9 @@ def analyze_game():
         evals.append(score)
     return jsonify({'evals': evals})
 
-@app.route('/upload', methods=['GET'])
+@app.route('/upload')
 def upload():
-    return render_template('upload.html')
+    return render_template('upload.html', menu_items=MENU_ITEMS)
 
 @app.route('/process_pgn', methods=['POST'])
 def process_pgn():
@@ -409,7 +424,7 @@ def library():
     all_games = list(library_collection.find(query, {'_id': 1, 'headers': 1, 'opening': 1, 'moves': 1}))
     for g in all_games:
         g['id'] = str(g['_id'])
-    return render_template('library.html', games=games, all_games=all_games, page=page, per_page=per_page, total_games=total_games, search=search)
+    return render_template('library.html', games=games, all_games=all_games, page=page, per_page=per_page, total_games=total_games, search=search, menu_items=MENU_ITEMS)
 
 @app.route('/openings_list')
 def openings_list():
@@ -418,6 +433,29 @@ def openings_list():
     openings = [o for o in openings if o]  # Remove empty/null
     openings.sort()
     return jsonify({'openings': openings})
+
+@app.route('/analysis')
+def analysis():
+    return render_template('placeholder.html', title='Analysis Page', menu_items=MENU_ITEMS)
+
+@app.route('/annotate')
+def annotate():
+    return render_template('placeholder.html', title='Annotate Game', menu_items=MENU_ITEMS)
+
+@app.route('/record')
+def record():
+    return render_template('placeholder.html', title='Record/Film Game', menu_items=MENU_ITEMS)
+
+@app.route('/club')
+def club():
+    return render_template('placeholder.html', title='Chess Club Module', menu_items=MENU_ITEMS)
+
+@app.route('/ideas')
+def ideas():
+    return render_template('placeholder.html', title='Submit Improvement Ideas', menu_items=MENU_ITEMS)
+
+# Register menu items after routes
+# Remove Flask-Menu imports and usage
 
 @app.route('/logoff')
 def logoff():
