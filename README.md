@@ -8,6 +8,9 @@ ChessFlask is the ultimate modern chess web app for players, club enthusiasts, a
 ## ✨ Features
 - **Modern Home, Play, and Login Screens**: Redesigned with gradients, card layouts, and chess-themed backgrounds for a beautiful, consistent experience.
 - **Stockfish-Powered Play & Analysis**: Every move, hint, and analysis is backed by the world's strongest chess engine.
+- **Engine ELO Slider**: Set Stockfish's playing strength with a single, intuitive ELO slider (800–2500). Advanced engine settings are now handled automatically for a simpler, more user-friendly experience.
+- **Real-Time Evaluation Bar**: See who's winning at a glance with a modern, vertical evaluation bar. The bar updates in real time, always shows the correct color orientation (white on your side), and can be toggled on/off in settings.
+- **Move Information Panel**: The moves table and move navigation controls are now grouped in a dedicated, collapsible 'Move Information' panel for a cleaner, more organized interface.
 - **Cheat Panel with Depth Slider**: Instantly see the best moves at any depth (1–20) with a compact, toggleable cheat panel—perfect for learning or "cheating." Now with improved UI and slider placement.
 - **MongoDB-Backed Game Library**: Upload PGN files, filter/search games, and save to your personal library with statistics and opening selection. Requires MongoDB for full functionality.
 - **Move Navigation**: Step through your game with first/last/next/previous controls and a move number field.
@@ -41,10 +44,15 @@ ChessFlask is the ultimate modern chess web app for players, club enthusiasts, a
 ## 🖼️ Screenshots
 - **Gameplay:**
   ![Gameplay Example](releaseNotes/Gameplay%20early.png)
+  
+  <!-- Add a new screenshot below showing the evaluation bar and move information panel -->
+  ![Gameplay with Evaluation Bar and Move Info](releaseNotes/Gameplay%20with%20evalbar.png)
+
 - **Openings Analysis:**
   ![Openings Analysis](releaseNotes/Analyse%20openings.png)
 - **Cheat Panel:**
   <!-- Add a screenshot of the new cheat panel UI here -->
+  ![Cheat Panel](releaseNotes/CheatPanel.png)
 - **Game Over Summary:**
   ![Game Over Summary](releaseNotes/Analyse%20openings.png)
 

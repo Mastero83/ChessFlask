@@ -37,6 +37,7 @@
                 background: linear-gradient(135deg, #e3e9f7 0%, #f5f7fa 40%, #b6c6e6 100%);
                 position: relative;
                 overflow-x: hidden;
+                padding-top: 56px; /* was 70px in style.css, reduce if navbar allows */
             }
             body::before {
                 content: '';
@@ -67,8 +68,9 @@
                 display: flex;
                 flex-direction: column;
                 align-items: center;
-                justify-content: center;
-                min-height: 100vh;
+                justify-content: flex-start; /* was center, now start to move up */
+                min-height: unset; /* was 100vh, now unset to allow content to move up */
+                padding-top: 12px; /* add a little space, but much less than before */
                 position: relative;
                 z-index: 1;
             }
@@ -76,8 +78,8 @@
                 background: #fff;
                 border-radius: 24px;
                 box-shadow: 0 8px 32px #0002;
-                padding: 48px 40px 40px 40px;
-                margin: 32px 0;
+                padding: 24px 28px 28px 28px; /* was 48px 40px 40px 40px, now less top/more compact */
+                margin: 12px 0 0 0; /* was 32px 0, now less top margin */
                 text-align: center;
                 max-width: 600px;
                 width: 100%;
@@ -240,27 +242,7 @@
           </div>
         </nav>
         <div id="sidebarMenu" style="position:fixed;top:0;left:0;width:240px;height:100vh;background:#232a34;box-shadow:2px 0 12px #0002;z-index:2000;transform:translateX(-100%);transition:transform 0.25s;display:flex;flex-direction:column;padding-top:40px;">
-            <ul style="list-style:none;padding:0 0 0 0;margin:0;flex:1;">
-                {% for item in menu_items %}
-                {% if item.name == 'Play' %}
-                <li style="margin:0;">
-                    <a href="#" id="playMenuToggle" style="display:block;padding:12px 24px;font-size:1.1em;color:#fff;text-decoration:none;border-left:4px solid transparent;transition:background 0.2s,border-color 0.2s;">
-                        {{ item.name }} <span id="playMenuArrow" style="float:right;">&#9654;</span>
-                    </a>
-                    <ul id="playSubMenu" style="display:none;list-style:none;padding-left:24px;">
-                        <li><a href="/play?color=white" style="display:block;padding:8px 24px;font-size:1em;color:#fff;text-decoration:none;">Play as White</a></li>
-                        <li><a href="/play?color=black" style="display:block;padding:8px 24px;font-size:1em;color:#fff;text-decoration:none;">Play as Black</a></li>
-                    </ul>
-                </li>
-                {% else %}
-                <li style="margin:0;">
-                    <a href="{{ item.url }}" style="display:block;padding:12px 24px;font-size:1.1em;color:#fff;text-decoration:none;border-left:4px solid transparent;transition:background 0.2s,border-color 0.2s;">
-                        {{ item.name }}
-                    </a>
-                </li>
-                {% endif %}
-                {% endfor %}
-            </ul>
+            {% include 'sidebar_menu.html' with context %}
         </div>
         <script>
         $(function(){
@@ -289,191 +271,161 @@
         });
         </script>
         <div class="play-container">
-            <div class="play-card" style="display: flex; flex-direction: row; align-items: flex-start; justify-content: center; gap: 36px; max-width: 1100px;">
+            <div class="play-card" style="display: flex; flex-direction: row; align-items: flex-start; justify-content: center; gap: 24px; max-width: 1100px;">
+                <div id="evalBarContainer" style="width: 24px; height: 100%; min-height: 320px; max-height: 480px; margin-right: 0; display: none; align-items: center; justify-content: center; position: relative;">
+                    <div id="evalBar" style="width: 16px; height: 100%; border-radius: 8px; background: #222; position: relative; overflow: hidden; display: flex; flex-direction: column;">
+                        <div id="evalBarWhite" style="width: 100%; background: #fff; transition: height 0.4s cubic-bezier(.4,2,.6,1); height: 50%;"></div>
+                        <div id="evalBarBlack" style="width: 100%; background: #111; transition: height 0.4s cubic-bezier(.4,2,.6,1); height: 50%;"></div>
+                        <div id="evalBarScore" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: #222; background: rgba(255,255,255,0.92); border-radius: 6px; font-size: 0.95em; font-weight: 700; padding: 2px 7px; pointer-events: none; z-index: 2; box-shadow: 0 1px 4px #0001; display: none;"></div>
+                    </div>
+                </div>
                 <div style="flex:0 0 auto; display:flex; flex-direction:column; align-items:center;">
                     <div id="board"></div>
                 </div>
                 <div class="play-info" style="flex:1; min-width:320px; max-width:480px;">
                     <div id="topIcons" style="display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 0; margin-bottom: 12px;">
-                        <a href="/" id="homeIconBtn" style="background: none; border: none; cursor: pointer; font-size: 1.8em; color: #1976d2; z-index: 10; border-radius: 50%; padding: 4px; text-decoration: none;" title="Back to Home">
-                            <span class="glyphicon glyphicon-home"></span>
-                        </a>
-                        <button id="cheatsToggleBtn" style="background: none; border: none; cursor: pointer; font-size: 1.8em; color: #888; z-index: 10;" title="Cheat Mode">
-                            <span class="glyphicon glyphicon-eye-open"></span>
-                        </button>
-                        <button id="settingsToggleBtn" style="background: none; border: none; cursor: pointer; font-size: 1.8em; color: #888; z-index: 10;" title="Settings">
-                            <span class="glyphicon glyphicon-cog"></span>
-                        </button>
-                        <button id="aiAssistantToggleBtn" style="background: none; border: none; cursor: pointer; font-size: 1.8em; color: #888; z-index: 10;" title="AI Assistant">
-                            <span class="glyphicon glyphicon-comment"></span>
-                        </button>
-                        <button id="downloadPgnBtn" style="background: none; border: none; cursor: pointer; font-size: 1.8em; color: #888; z-index: 10;" title="Import/Export PGN">
-                            <span class="glyphicon glyphicon-transfer"></span>
-                        </button>
-                        <button id="metaPanelToggleBtn" style="background: none; border: none; cursor: pointer; font-size: 1.8em; color: #888; z-index: 10;" title="Game Info">
-                            <span class="glyphicon glyphicon-info-sign"></span>
-                        </button>
+                        <!-- Removed home button icon -->
                     </div>
-                    <div class="row" style="margin:0;">
-                        <div class="col-xs-12" style="padding:0;">
-                            <div id="playersRow" style="display: flex; gap: 0; align-items: stretch; margin-bottom: 8px; width: 100%; max-width: 480px;">
-                                <div id="userInfoCard" style="flex: 1; display: flex; align-items: center; gap: 14px; background: linear-gradient(90deg,#e3e9f7 60%,#b6c6e6 100%); border-radius: 14px 0 0 14px; box-shadow: 0 2px 8px #1976d233; padding: 12px 18px; border-right: 2px solid #fff; position: relative; min-width: 0;">
-                                    <div style="width: 48px; height: 48px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                                        <img src="https://ui-avatars.com/api/?name={{ session['username']|default('User') }}&background=1976d2&color=fff&size=48" alt="Profile" style="width: 48px; height: 48px; object-fit: cover; border-radius: 50%;">
-                                    </div>
-                                    <div style="display: flex; flex-direction: column; align-items: flex-start; min-width: 0;">
-                                        <div style="font-size: 1.1em; font-weight: 700; color: #1976d2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px;">{{ session['username']|default('User') }}</div>
-                                        <div style="font-size: 0.95em; color: #888;">White</div>
-                                    </div>
+                    <div id="playersRow" style="display: flex; gap: 0; align-items: stretch; margin-bottom: 8px; width: 100%; max-width: 480px;">
+                        <div id="userInfoCard" style="flex: 1; display: flex; align-items: center; gap: 14px; background: linear-gradient(90deg,#e3e9f7 60%,#b6c6e6 100%); border-radius: 14px 0 0 14px; box-shadow: 0 2px 8px #1976d233; padding: 12px 18px; border-right: 2px solid #fff; position: relative; min-width: 0;">
+                            <div style="width: 48px; height: 48px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                                <img src="https://ui-avatars.com/api/?name={{ session['username']|default('User') }}&background=1976d2&color=fff&size=48" alt="Profile" style="width: 48px; height: 48px; object-fit: cover; border-radius: 50%;">
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: flex-start; min-width: 0;">
+                                <div style="font-size: 1.1em; font-weight: 700; color: #1976d2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px;">{{ session['username']|default('User') }}</div>
+                                <div style="font-size: 0.95em; color: #888;">White</div>
+                            </div>
+                        </div>
+                        <div id="opponentInfoCard" style="flex: 1; display: flex; align-items: center; gap: 14px; background: linear-gradient(90deg,#444 60%,#222 100%); border-radius: 0 14px 14px 0; box-shadow: 0 2px 8px #0003; padding: 12px 18px; border-left: 2px solid #fff; position: relative; min-width: 0;">
+                            <div style="width: 48px; height: 48px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                                <img src="https://img.icons8.com/ios-filled/50/ffb300/robot-2.png" alt="Opponent" style="width: 38px; height: 38px; object-fit: cover; border-radius: 50%;">
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: flex-start; min-width: 0;">
+                                <div id="opponentName" style="font-size: 1.1em; font-weight: 700; color: #fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px;">Stockfish</div>
+                                <div id="opponentSettings" style="font-size: 0.95em; color: #ffe082;">Black</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="statusBox" style="width: 100%; max-width: 480px; margin: 0 auto 18px auto; display: flex; justify-content: center;">
+                        <div style="flex:1; background: linear-gradient(90deg,#f5f7fa 60%,#e3e9f7 100%); border-radius: 12px; box-shadow: 0 2px 8px #1976d233; padding: 12px 0; font-size: 1.15em; font-weight: 600; color: #1976d2; text-align: center; letter-spacing: 0.5px;">
+                            <span id="status">White to move</span>
+                        </div>
+                    </div>
+                    <div id="metaPanelAccordion" class="panel-group" role="tablist" aria-multiselectable="true" style="margin-bottom: 12px;">
+                        <div class="panel panel-info">
+                            <div class="panel-heading" role="tab" id="metaPanelHeading">
+                                <h4 class="panel-title">
+                                    <a role="button" data-toggle="collapse" data-parent="#metaPanelAccordion" href="#metaPanel" aria-expanded="false" aria-controls="metaPanel">
+                                        <span class="glyphicon glyphicon-info-sign" style="margin-right:8px;"></span><b>Game Information</b>
+                                    </a>
+                                </h4>
+                            </div>
+                            <div id="metaPanel" class="panel-collapse collapse" role="tabpanel" aria-labelledby="metaPanelHeading">
+                                <div class="panel-body" id="metaPanelBody">
+                                    <!-- Metadata fields will be injected here -->
                                 </div>
-                                <div id="opponentInfoCard" style="flex: 1; display: flex; align-items: center; gap: 14px; background: linear-gradient(90deg,#444 60%,#222 100%); border-radius: 0 14px 14px 0; box-shadow: 0 2px 8px #0003; padding: 12px 18px; border-left: 2px solid #fff; position: relative; min-width: 0;">
-                                    <div style="width: 48px; height: 48px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                                        <img src="https://img.icons8.com/ios-filled/50/ffb300/robot-2.png" alt="Opponent" style="width: 38px; height: 38px; object-fit: cover; border-radius: 50%;">
+                            </div>
+                        </div>
+                        <div class="panel panel-info">
+                            <div class="panel-heading" role="tab" id="moveInfoPanelHeading">
+                                <h4 class="panel-title" style="text-align: center; width: 100%;">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#metaPanelAccordion" href="#moveInfoPanel" aria-expanded="false" aria-controls="moveInfoPanel">
+                                        <span class="glyphicon glyphicon-list-alt" style="margin-right:8px;"></span><b>Move Information</b>
+                                    </a>
+                                </h4>
+                            </div>
+                            <div id="moveInfoPanel" class="panel-collapse collapse" role="tabpanel" aria-labelledby="moveInfoPanelHeading">
+                                <div class="panel-body" id="moveInfoPanelBody">
+                                    <button id="downloadPgnBtn" style="background: none; border: none; cursor: pointer; font-size: 1.4em; color: #888; z-index: 10; margin-bottom: 8px; float: right;" title="Import/Export PGN">
+                                        <span class="glyphicon glyphicon-transfer"></span>
+                                    </button>
+                                    <div style="clear: both;"></div>
+                                    <div id="moveNavControls" style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 8px;">
+                                        <button id="moveNavFirst" class="btn btn-default btn-sm" title="First Move"><span class="glyphicon glyphicon-step-backward"></span></button>
+                                        <button id="moveNavBack" class="btn btn-default btn-sm" title="Previous Move"><span class="glyphicon glyphicon-chevron-left"></span></button>
+                                        <input id="moveNavNumber" type="number" min="0" value="0" style="width: 60px; text-align: center; font-weight: bold; font-size: 1.1em; border-radius: 6px; border: 1px solid #bbb;" title="Go to move number">
+                                        <span id="moveNavTotal" style="font-size: 1.1em; color: #888;">/ 0</span>
+                                        <button id="moveNavForward" class="btn btn-default btn-sm" title="Next Move"><span class="glyphicon glyphicon-chevron-right"></span></button>
+                                        <button id="moveNavLast" class="btn btn-default btn-sm" title="Last Move"><span class="glyphicon glyphicon-step-forward"></span></button>
                                     </div>
-                                    <div style="display: flex; flex-direction: column; align-items: flex-start; min-width: 0;">
-                                        <div id="opponentName" style="font-size: 1.1em; font-weight: 700; color: #fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px;">Stockfish</div>
-                                        <div id="opponentSettings" style="font-size: 0.95em; color: #ffe082;">Black</div>
+                                    <div id="moveTable">
+                                        <table class="table table-striped table-condensed" id="pgn">
+                                            <thead>
+                                                <tr>
+                                                    <th>#</th>
+                                                    <th>White</th>
+                                                    <th>Black</th>
+                                                </tr>
+                                            </thead>
+                                        </table>
                                     </div>
                                 </div>
                             </div>
-                            <div id="statusBox" style="width: 100%; max-width: 480px; margin: 0 auto 18px auto; display: flex; justify-content: center;">
-                                <div style="flex:1; background: linear-gradient(90deg,#f5f7fa 60%,#e3e9f7 100%); border-radius: 12px; box-shadow: 0 2px 8px #1976d233; padding: 12px 0; font-size: 1.15em; font-weight: 600; color: #1976d2; text-align: center; letter-spacing: 0.5px;">
-                                    <span id="status">White to move</span>
+                        </div>
+                    </div>
+                    <div class="panel-group" id="rightAccordion" role="tablist" aria-multiselectable="true">
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="gameControlsPanelHeading">
+                                <h4 class="panel-title">
+                                    <a role="button" data-toggle="collapse" data-parent="#rightAccordion" href="#gameControlsPanel" aria-expanded="true" aria-controls="gameControlsPanel">
+                                        <span class="glyphicon glyphicon-console" style="margin-right:8px;"></span><b>Game Controls</b>
+                                    </a>
+                                </h4>
+                            </div>
+                            <div id="gameControlsPanel" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="gameControlsPanelHeading">
+                                <div class="panel-body">
+                                    <button type="button" class="btn btn-primary" id="backBtn" onclick="takeBack()">Take Back</button>
+                                    <button type="button" class="btn btn-danger" id="reset" onclick="newGame()">New Game</button>
+                                    <button type="button" class="btn btn-warning" id="giveUpBtn">Give Up</button>
+                                    <button type="button" class="btn btn-info" id="drawBtn">Offer Draw</button>
                                 </div>
                             </div>
-                            <div id="mainWindow" style="display: flex; flex-direction: row; align-items: flex-start; justify-content: center;">
-                                <div style="flex: 1; display: flex; flex-direction: column; align-items: center;"></div>
+                        </div>
+                        <div class="panel panel-danger">
+                            <div class="panel-heading" role="tab" id="cheatPanelHeading">
+                                <h4 class="panel-title">
+                                    <a role="button" data-toggle="collapse" data-parent="#rightAccordion" href="#cheatPanel" aria-expanded="false" aria-controls="cheatPanel">
+                                        <span class="glyphicon glyphicon-eye-open" style="margin-right:8px;"></span><b>Cheat Panel</b>
+                                    </a>
+                                </h4>
                             </div>
-                            <div id="secondWindow">
-                                <div id="moveNavControls" style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 8px;">
-                                    <button id="moveNavFirst" class="btn btn-default btn-sm" title="First Move"><span class="glyphicon glyphicon-step-backward"></span></button>
-                                    <button id="moveNavBack" class="btn btn-default btn-sm" title="Previous Move"><span class="glyphicon glyphicon-chevron-left"></span></button>
-                                    <input id="moveNavNumber" type="number" min="0" value="0" style="width: 60px; text-align: center; font-weight: bold; font-size: 1.1em; border-radius: 6px; border: 1px solid #bbb;" title="Go to move number">
-                                    <span id="moveNavTotal" style="font-size: 1.1em; color: #888;">/ 0</span>
-                                    <button id="moveNavForward" class="btn btn-default btn-sm" title="Next Move"><span class="glyphicon glyphicon-chevron-right"></span></button>
-                                    <button id="moveNavLast" class="btn btn-default btn-sm" title="Last Move"><span class="glyphicon glyphicon-step-forward"></span></button>
-                                </div>
-                                <div id="metaPanelAccordion" class="panel-group" role="tablist" aria-multiselectable="true" style="margin-bottom: 12px;">
-                                    <div class="panel panel-info">
-                                        <div class="panel-heading" role="tab" id="metaPanelHeading">
-                                            <h4 class="panel-title">
-                                                <a role="button" data-toggle="collapse" data-parent="#metaPanelAccordion" href="#metaPanel" aria-expanded="false" aria-controls="metaPanel">
-                                                    <span class="glyphicon glyphicon-info-sign" style="margin-right:8px;"></span><b>Game Information</b>
-                                                </a>
-                                            </h4>
-                                        </div>
-                                        <div id="metaPanel" class="panel-collapse collapse" role="tabpanel" aria-labelledby="metaPanelHeading">
-                                            <div class="panel-body" id="metaPanelBody">
-                                                <!-- Metadata fields will be injected here -->
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div id="moveTable">
-                                    <table class="table table-striped table-condensed" id="pgn">
-                                        <thead>
-                                            <tr>
-                                                <th>#</th>
-                                                <th>White</th>
-                                                <th>Black</th>
-                                            </tr>
-                                        </thead>
-                                    </table>
-                                </div>
-                                <!-- Cheat Panel restored -->
-                                <div id="cheatsPanel" class="panel panel-danger" style="display:none; margin-bottom: 18px;">
-                                  <div class="panel-heading" style="display: flex; align-items: center; justify-content: space-between;">
-                                    <span><span class="glyphicon glyphicon-eye-open" style="margin-right:8px;"></span><b>Cheat Mode</b></span>
-                                    <span style="display: flex; align-items: center; gap: 8px; font-weight:normal;">
-                                      <label for="cheatDepthSlider" style="margin:0; font-weight:normal;">Depth:</label>
-                                      <input id="cheatDepthSlider" type="range" min="1" max="20" value="10" style="width:80px; vertical-align:middle; margin:0 6px;">
-                                      <span id="cheatDepthValue">10</span>
-                                    </span>
-                                  </div>
-                                  <div class="panel-body" id="cheatsMovesList">
+                            <div id="cheatPanel" class="panel-collapse collapse" role="tabpanel" aria-labelledby="cheatPanelHeading">
+                                <div class="panel-body" id="cheatsMovesList">
                                     <!-- Cheat moves will be injected here -->
-                                  </div>
+                                    <label for="cheatDepthSlider" style="margin:0; font-weight:normal;">Depth:</label>
+                                    <input id="cheatDepthSlider" type="range" min="1" max="20" value="10" style="width:80px; vertical-align:middle; margin:0 6px;">
+                                    <span id="cheatDepthValue">10</span>
                                 </div>
-                                <div id="aiAssistantPanel" class="panel panel-info" style="margin-bottom: 18px; display: none;">
-                                    <div class="panel-heading" style="display: flex; align-items: center;">
-                                        <img src="https://img.icons8.com/color/48/000000/robot.png" alt="AI Assistant" style="width:32px;height:32px;margin-right:10px;">
-                                        <b>AI Assistant</b>
-                                    </div>
-                                    <div class="panel-body" style="height: 120px; overflow-y: auto; background: #fafdff; border-radius: 0 0 8px 8px;">
-                                        <div id="aiChat" style="font-size: 1em; color: #333;">
-                                            <div class="ai-message">Hello! I'll comment on the game as you play.</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div id="controls">
-                                    <div class="panel panel-default" style="margin-bottom: 10px;">
-                                        <div class="panel-heading"><b>Game Controls</b></div>
-                                        <div class="panel-body">
-                                            <button type="button" class="btn btn-primary" id="backBtn" onclick="takeBack()";>Take Back</button>
-                                            <button type="button" class="btn btn-danger" id="reset" onclick="newGame()";>New Game</button>
-                                            <button type="button" class="btn btn-warning" id="giveUpBtn">Give Up</button>
-                                            <button type="button" class="btn btn-info" id="drawBtn">Offer Draw</button>
-                                        </div>
-                                    </div>
-                                    <div class="panel panel-default" style="margin-bottom: 10px;">
-                                        <div class="panel-heading"><b>Engine Settings</b></div>
-                                        <div class="panel-body">
-                                            <label for="engineEloSlider" style="margin-right: 8px;">CPU ELO:</label>
-                                            <input type="range" class="form-control" id="engineEloSlider" min="800" max="2500" value="800" step="10" style="width: 200px; display: inline-block; vertical-align: middle;">
-                                            <span id="engineEloValue" style="margin-left: 8px; font-weight: bold;">800</span>
-                                        </div>
-                                    </div>
-                                    <!-- Settings Panel -->
-                                    <div id="settingsPanelWrapper" style="position: relative;">
-                                        <div id="settingsPanel" class="panel panel-default" style="display: none; margin-top: 10px;">
-                                            <div class="panel-heading"><b>Settings</b></div>
-                                            <div class="panel-body">
-                                                <div class="panel-group" id="settingsAccordion" role="tablist" aria-multiselectable="true">
-                                                    <div class="panel panel-default">
-                                                        <div class="panel-heading" role="tab" id="headingSound">
-                                                            <h4 class="panel-title">
-                                                                <a role="button" data-toggle="collapse" data-parent="#settingsAccordion" href="#collapseSound" aria-expanded="true" aria-controls="collapseSound">
-                                                                    Sound Settings
-                                                                </a>
-                                                            </h4>
-                                                        </div>
-                                                        <div id="collapseSound" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingSound">
-                                                            <div class="panel-body">
-                                                                <button type="button" class="btn btn-default" id="muteBtn">Mute</button>
-                                                                <input type="range" id="volSlider" min="0" max="1" step="0.01" value="0.5" style="width:100px; margin-left:10px; vertical-align:middle;">
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="panel panel-default">
-                                                        <div class="panel-heading" role="tab" id="headingAdvanced">
-                                                            <h4 class="panel-title">
-                                                                <a class="collapsed" role="button" data-toggle="collapse" data-parent="#settingsAccordion" href="#collapseAdvanced" aria-expanded="false" aria-controls="collapseAdvanced">
-                                                                    Advanced Settings
-                                                                </a>
-                                                            </h4>
-                                                        </div>
-                                                        <div id="collapseAdvanced" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingAdvanced">
-                                                            <div class="panel-body">
-                                                                <label style="margin-bottom: 0;">
-                                                                    <input type="checkbox" id="toggleEvalBar" style="margin-right: 5px;">Show Evaluation Bar
-                                                                </label>
-                                                                <div style="margin-top: 12px;">
-                                                                    <label for="boardSizeSlider" style="margin-right: 8px;">Board Size</label>
-                                                                    <input type="range" id="boardSizeSlider" min="300" max="640" value="640" step="10" style="width: 120px; vertical-align: middle;">
-                                                                    <span id="boardSizeValue" style="margin-left: 6px;">640px</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="advancedPanelHeading">
+                                <h4 class="panel-title">
+                                    <a role="button" data-toggle="collapse" data-parent="#rightAccordion" href="#advancedPanel" aria-expanded="false" aria-controls="advancedPanel">
+                                        <span class="glyphicon glyphicon-cog" style="margin-right:8px;"></span><b>Advanced Settings</b>
+                                    </a>
+                                </h4>
+                            </div>
+                            <div id="advancedPanel" class="panel-collapse collapse" role="tabpanel" aria-labelledby="advancedPanelHeading">
+                                <div class="panel-body">
+                                    <label for="engineEloSlider" style="margin-right: 8px;">CPU ELO:</label>
+                                    <input type="range" class="form-control" id="engineEloSlider" min="800" max="2500" value="800" step="10" style="width: 200px; display: inline-block; vertical-align: middle;">
+                                    <span id="engineEloValue" style="margin-left: 8px; font-weight: bold;">800</span>
+                                    <hr/>
+                                    <label style="margin-bottom: 0;">
+                                        <input type="checkbox" id="toggleEvalBar" style="margin-right: 5px;" checked>Show Evaluation Bar
+                                    </label>
+                                    <div style="margin-top: 12px;">
+                                        <label for="boardSizeSlider" style="margin-right: 8px;">Board Size</label>
+                                        <input type="range" id="boardSizeSlider" min="300" max="640" value="640" step="10" style="width: 120px; vertical-align: middle;">
+                                        <span id="boardSizeValue" style="margin-left: 6px;">640px</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
         </div>
         <div id="pgnPanelWrapper" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.25); z-index: 2000; align-items: center; justify-content: center;">
             <div id="pgnPanel" class="panel panel-default" style="max-width: 600px; width: 90vw; margin: auto; box-shadow: 0 4px 24px #0003; border-radius: 12px;">

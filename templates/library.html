@@ -207,15 +207,7 @@
       </div>
     </nav>
     <div id="sidebarMenu" style="position:fixed;top:0;left:0;width:240px;height:100vh;background:#232a34;box-shadow:2px 0 12px #0002;z-index:2000;transform:translateX(-100%);transition:transform 0.25s;display:flex;flex-direction:column;padding-top:40px;">
-        <ul style="list-style:none;padding:0 0 0 0;margin:0;flex:1;">
-            {% for item in menu_items %}
-            <li style="margin:0;">
-                <a href="{{ item.url }}" style="display:block;padding:12px 24px;font-size:1.1em;color:#fff;text-decoration:none;border-left:4px solid transparent;transition:background 0.2s,border-color 0.2s;">
-                    {{ item.name }}
-                </a>
-            </li>
-            {% endfor %}
-        </ul>
+        {% include 'sidebar_menu.html' with context %}
     </div>
     <script>
     $(function(){

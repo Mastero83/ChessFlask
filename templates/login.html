@@ -13,6 +13,7 @@
             background: linear-gradient(135deg, #e3e9f7 0%, #f5f7fa 40%, #b6c6e6 100%);
             position: relative;
             overflow-x: hidden;
+            overflow-y: hidden; /* Disable vertical scrolling */
         }
         body::before {
             content: '';
@@ -43,19 +44,19 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
             min-height: 100vh;
             position: relative;
             z-index: 1;
+            margin-top: 32px; /* Add a small top margin */
         }
         .login-card {
             background: #fff;
             border-radius: 24px;
             box-shadow: 0 8px 32px #0002;
-            padding: 48px 40px 40px 40px;
-            margin: 32px 0;
+            padding: 28px 24px 24px 24px; /* was 48px 40px 40px 40px */
+            margin: 16px 0; /* was 32px 0 */
             text-align: center;
-            max-width: 440px;
+            max-width: 400px; /* was 440px */
             width: 100%;
             position: relative;
         }
@@ -69,35 +70,35 @@
         }
         .login-desc {
             color: #444;
-            margin-bottom: 32px;
-            font-size: 1.1em;
+            margin-bottom: 18px; /* was 32px */
+            font-size: 1.05em;
         }
         .provider-row {
             display: flex;
             flex-direction: row;
             justify-content: center;
-            gap: 10px;
-            margin-bottom: 28px;
+            gap: 8px;
+            margin-bottom: 16px; /* was 28px */
             flex-wrap: wrap;
         }
         .provider-btn {
             background: #f5f7fa;
             border: 2px solid #e3e9f7;
             border-radius: 10px;
-            padding: 6px 10px;
-            font-size: 1.1em;
+            padding: 4px 8px; /* was 6px 10px */
+            font-size: 1em; /* was 1.1em */
             color: #555;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
             transition: box-shadow 0.2s, border 0.2s;
             cursor: pointer;
-            min-width: 90px;
-            max-width: 120px;
+            min-width: 80px; /* was 90px */
+            max-width: 110px; /* was 120px */
         }
         .provider-btn img {
-            width: 22px;
-            height: 22px;
+            width: 20px; /* was 22px */
+            height: 20px; /* was 22px */
         }
         .provider-btn:hover {
             box-shadow: 0 2px 12px #1976d233;
@@ -105,21 +106,21 @@
             color: #1976d2;
         }
         .login-form {
-            margin-top: 18px;
+            margin-top: 10px; /* was 18px */
             margin-bottom: 0;
         }
         .login-form input[type="text"] {
             border-radius: 8px;
             border: 1.5px solid #b6c6e6;
-            padding: 12px 16px;
-            font-size: 1.1em;
+            padding: 10px 14px; /* was 12px 16px */
+            font-size: 1em; /* was 1.1em */
             width: 100%;
-            margin-bottom: 18px;
+            margin-bottom: 12px; /* was 18px */
         }
         .login-form button {
             width: 100%;
-            font-size: 1.2em;
-            padding: 14px 0;
+            font-size: 1.1em; /* was 1.2em */
+            padding: 10px 0; /* was 14px 0 */
             border-radius: 8px;
             background: linear-gradient(90deg, #1976d2 60%, #64b5f6 100%);
             color: #fff;
@@ -137,7 +138,7 @@
 <body>
     <div class="login-container">
         <div class="login-card">
-            <div class="login-title">Sign in to ChessClub AI Assistant</div>
+            <img src="{{ url_for('static', filename='logo/chess club.png') }}" alt="Chess Club Logo" style="max-width: 260px; width: 100%; margin-bottom: 18px; display: block; margin-left: auto; margin-right: auto;">
             <div class="login-desc">Choose a provider or enter your name to continue:</div>
             <div class="provider-row">
                 <button class="provider-btn" title="Google (placeholder)"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/google.svg" alt="Google" style="width:28px;height:28px;"> Google</button>

@@ -87,6 +87,8 @@ MENU_ITEMS = [
     {'name': 'Play', 'url': '/play'},
     {'name': 'Library', 'url': '/library'},
     {'name': 'Upload', 'url': '/upload'},
+    {'name': 'Import from Chess.com', 'url': '/upload_chesscom'},
+    {'name': 'Openings', 'url': '/openings'},
     {'name': 'Analysis (Placeholder)', 'url': '/analysis'},
     {'name': 'Annotate (Placeholder)', 'url': '/annotate'},
     {'name': 'Record/Film (Placeholder)', 'url': '/record'},
@@ -240,6 +242,14 @@ def get_eval(fen):
     sf = StockfishEngine()
     sf.set_fen(fen)
     score = sf.get_evaluation()
+    # score is a dict: {"type": "cp" or "mate", "value": int}
+    if isinstance(score, dict):
+        if score.get('type') == 'cp':
+            return str(score.get('value', 0))
+        elif score.get('type') == 'mate':
+            return f"mate {score.get('value', 0)}"
+        else:
+            return '0'
     return str(score)
 
 @app.route('/cheat_moves/<int:depth>/<path:fen>/')
@@ -469,6 +479,12 @@ def club():
 def ideas():
     return render_template('placeholder.html', title='Submit Improvement Ideas', menu_items=MENU_ITEMS)
 
+@app.route('/user-usage')
+def user_usage():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    return render_template('user_usage.html')
+
 # Register menu items after routes
 # Remove Flask-Menu imports and usage
 
@@ -476,6 +492,158 @@ def ideas():
 def logoff():
     end_session()
     return redirect(url_for('login'))
+
+@app.route('/api/user-usage')
+def api_user_usage():
+    # Map technical paths to friendly names
+    PAGE_NAME_MAP = {
+        '/': 'Login',
+        '/startup': 'Home',
+        '/play': 'Play',
+        '/library': 'Library',
+        '/upload': 'Upload',
+        '/openings': 'Openings',
+        '/annotate': 'Annotate',
+        '/analysis': 'Analysis',
+        '/record': 'Record/Film',
+        '/club': 'Chess Club',
+        '/ideas': 'Submit Ideas',
+        '/user-usage': 'User Usage',
+    }
+    def friendly_page_name(page):
+        # Group by prefix for subpages (e.g., /play/123 -> Play)
+        for path, name in PAGE_NAME_MAP.items():
+            if page == path or page.startswith(path + '/'):
+                return name
+        return page  # fallback to raw path
+
+    pipeline = [
+        {"$match": {"username": {"$exists": True}}},
+        {"$group": {
+            "_id": "$username",
+            "total_sessions": {"$sum": 1},
+            "total_time": {"$sum": {"$ifNull": ["$duration", 0]}},
+            "sessions": {"$push": "$session_id"},
+        }}
+    ]
+    user_stats = list(sessions_collection.aggregate(pipeline))
+    total_logins = sum(u["total_sessions"] for u in user_stats)
+    total_time = sum(u["total_time"] for u in user_stats)
+    unique_users = len(user_stats)
+
+    # Logins over time (by day)
+    logins_over_time = list(sessions_collection.aggregate([
+        {"$match": {"start_time": {"$exists": True}}},
+        {"$project": {"date": {"$toDate": {"$multiply": [1000, {"$toLong": "$start_time"}]}}}},
+        {"$group": {
+            "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$date"}},
+            "count": {"$sum": 1}
+        }},
+        {"$sort": {"_id": 1}}
+    ]))
+
+    # Time spent by page (grouped by friendly name)
+    time_by_page = {}
+    page_visits = {}
+    for sess in sessions_collection.find({"pages_visited": {"$exists": True}}):
+        pages = sess.get("pages_visited", [])
+        for i, page in enumerate(pages):
+            p = page.get("page")
+            friendly = friendly_page_name(p)
+            t0 = page.get("timestamp")
+            t1 = pages[i+1]["timestamp"] if i+1 < len(pages) else sess.get("end_time", t0)
+            dt = max(0, t1-t0) if t1 and t0 else 0
+            time_by_page[friendly] = time_by_page.get(friendly, 0) + dt
+            page_visits[friendly] = page_visits.get(friendly, 0) + 1
+    # Format for charts
+    time_by_page_list = [{"page": k, "seconds": v} for k, v in time_by_page.items()]
+    page_visits_list = [{"page": k, "count": v} for k, v in page_visits.items()]
+    # Format logins over time
+    logins_over_time_list = [{"date": x["_id"], "count": x["count"]} for x in logins_over_time]
+    return jsonify({
+        "total_logins": total_logins,
+        "total_time": total_time,
+        "unique_users": unique_users,
+        "logins_over_time": logins_over_time_list,
+        "time_by_page": time_by_page_list,
+        "page_visits": page_visits_list
+    })
+
+import requests
+from flask import jsonify
+
+@app.route('/upload_chesscom')
+def upload_chesscom():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    return render_template('upload_chesscom.html', menu_items=MENU_ITEMS, current_page='Import from Chess.com')
+
+@app.route('/api/chesscom_games')
+def api_chesscom_games():
+    username = request.args.get('username', '').strip().lower()
+    filter_date = request.args.get('date')  # format: YYYY-MM
+    filter_type = request.args.get('type')  # e.g. 'blitz', 'rapid', etc.
+    filter_opponent = request.args.get('opponent', '').strip().lower()
+    filter_day = request.args.get('day')  # format: YYYY-MM-DD
+    if not username:
+        return jsonify({'error': 'Username is required.'}), 400
+    # Step 0: Check if user exists
+    profile_url = f'https://api.chess.com/pub/player/{username}'
+    try:
+        profile_resp = requests.get(profile_url, timeout=10)
+        if profile_resp.status_code == 404:
+            return jsonify({'error': f'User "{username}" not found on chess.com.'}), 404
+        if profile_resp.status_code != 200:
+            return jsonify({'error': f'Chess.com API error (profile): {profile_resp.status_code}'}), 502
+    except Exception as e:
+        return jsonify({'error': f'Failed to contact chess.com API (profile): {str(e)}'}), 500
+    # Step 1: Get archives
+    archives_url = f'https://api.chess.com/pub/player/{username}/games/archives'
+    try:
+        archives_resp = requests.get(archives_url, timeout=10)
+        if archives_resp.status_code != 200:
+            return jsonify({'error': f'Chess.com API error (archives): {archives_resp.status_code}'}), 502
+        archives = archives_resp.json().get('archives', [])
+    except Exception as e:
+        return jsonify({'error': f'Failed to contact chess.com API (archives): {str(e)}'}), 500
+    # Step 2: Filter archives by date if provided
+    if filter_date:
+        archives = [a for a in archives if filter_date in a]
+    # Step 3: Fetch games from each archive
+    games = []
+    for archive_url in archives[-3:]:  # Limit to last 3 months for demo/performance
+        try:
+            games_resp = requests.get(archive_url, timeout=10)
+            if games_resp.status_code != 200:
+                continue
+            for g in games_resp.json().get('games', []):
+                # Optional: filter by type
+                if filter_type and g.get('time_class') != filter_type:
+                    continue
+                # Optional: filter by opponent
+                white = g.get('white', {}).get('username', '').lower()
+                black = g.get('black', {}).get('username', '').lower()
+                if filter_opponent and filter_opponent not in (white, black):
+                    continue
+                # Format result
+                result = g.get('white', {}).get('result', '') + ' - ' + g.get('black', {}).get('result', '')
+                # Format date
+                from datetime import datetime
+                ts = g.get('end_time') or g.get('start_time')
+                date_str = datetime.utcfromtimestamp(ts).strftime('%Y-%m-%d') if ts else ''
+                # Optional: filter by single day
+                if filter_day and date_str != filter_day:
+                    continue
+                games.append({
+                    'white': g.get('white', {}).get('username', ''),
+                    'black': g.get('black', {}).get('username', ''),
+                    'result': result,
+                    'date': date_str,
+                    'pgn': g.get('pgn', '')
+                })
+        except Exception as e:
+            continue
+    return jsonify({'games': games})
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)

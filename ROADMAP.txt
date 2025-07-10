@@ -1,22 +1,37 @@
 ChessFlask Roadmap & Feature Checklist
 =====================================
 
-[ ] Improve engine settings UI and functionality
-[ ] Make player information cards more beautiful and dynamic
+# Release vNext: Major UI/UX, Analytics, and Engine Improvements
+# -------------------------------------------------------------
+# - Modernized login and startup screens with branding
+# - Play page and User Usage page now share a unified, beautiful layout
+# - Engine settings, evaluation bar, and move info panels improved
+# - Added User Usage analytics page with KPIs and charts
+# - General UI/UX polish and consistency
+# - Menu structure and navigation improved
+#
+
+[x] Improve engine settings UI and functionality
+[x] Make player information cards more beautiful and dynamic
 [ ] Implement single sign-on (SSO) via OpenID Connect (Facebook, Google, etc.)
 [ ] Add profile pictures for players (upload or external)
 [ ] Create a dedicated analysis page for in-depth game review
-[ ] Implement a robust, visually appealing evaluation bar
+[x] Implement a robust, visually appealing evaluation bar
 [ ] Add a "film/record the game" page (replay, step-through, export)
 [ ] Add an "annotate the game" page (comments, symbols, highlights)
 [ ] Add a "manage the library" page (edit, delete, organize games)
 [ ] Improve session management (track more, expire, audit)
 [ ] Only allow signed-in users to access main features
-[ ] General UI/UX polish and consistency
+[x] General UI/UX polish and consistency
 [ ] Improve AI assistant to show move statistics from Stockfish
 [ ] Create a chess club module (start with a digital twin of UVS, add all players, integrate AI, and upload their pictures)
 [ ] Add a page where users can submit improvement ideas
 [x] Improve menu structure and consistency in UI
+[x] Add a "User usage" page (menu item at bottom):
+    - Accessible only via the menu as a new item at the bottom
+    - Summarizes session data from MongoDB
+    - Shows meaningful KPI visualizations: user logins, time spent, page visits, and other important statistics
+    - Uses nice, modern visuals for all KPIs
 
 ---
 

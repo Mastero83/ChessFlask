@@ -43,11 +43,11 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
             min-height: 100dvh;
-            padding-top: 2dvh;
+            padding-top: 8px; /* Reduce top padding further */
             position: relative;
             z-index: 1;
+            /* Remove margin-top */
         }
         .startup-card {
             background: #fff;
@@ -56,7 +56,7 @@
             padding: 48px 40px 40px 40px;
             margin: 8px 0;
             text-align: center;
-            max-width: 440px;
+            max-width: 600px; /* was 440px, now wider for 2 columns */
             width: 100%;
             position: relative;
         }
@@ -76,21 +76,24 @@
         }
         .startup-btn-row {
             display: flex;
-            flex-direction: column;
+            flex-wrap: wrap;
             gap: 18px;
+            justify-content: center;
         }
         .startup-btn {
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 12px;
-            width: 100%;
             font-size: 1.25em;
             padding: 18px 0;
             border-radius: 12px;
             font-weight: 600;
             box-shadow: 0 2px 8px #0001;
             transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+            flex: 1 1 45%; /* allow 2 per row */
+            min-width: 220px;
+            max-width: 100%;
         }
         .startup-btn svg {
             width: 28px;
@@ -139,12 +142,16 @@
         .startup-chess-icon {
             margin-right: 8px;
         }
+        @media (max-width: 700px) {
+            .startup-card { max-width: 98vw; }
+            .startup-btn { flex: 1 1 100%; min-width: 0; }
+        }
     </style>
 </head>
 <body>
     <div class="startup-container">
         <div class="startup-card">
-            <div class="startup-title">ChessClub AI Assistant</div>
+            <img src="{{ url_for('static', filename='logo/chess club.png') }}" alt="Chess Club Logo" style="max-width: 260px; width: 100%; margin-bottom: 18px; display: block; margin-left: auto; margin-right: auto;">
             {% if username %}
             <div class="startup-greeting" style="font-size:1.15em; color:#1976d2; font-weight:600; margin-bottom:10px;">Welcome, {{ username }}!</div>
             {% endif %}
@@ -159,7 +166,7 @@
                     <span class="glyphicon glyphicon-education"></span> Analyse and Learn Openings
                 </a> -->
                 <a href="#" class="btn startup-btn startup-btn-analyse" style="opacity:0.7; cursor:not-allowed;">
-                    <span class="glyphicon glyphicon-search"></span> Analyse a Game (Coming Soon)
+                    <span class="glyphicon glyphicon-search"></span> Analyse a Game
                 </a>
                 <a href="{{ url_for('upload') }}" class="btn startup-btn startup-btn-upload">
                     <span class="glyphicon glyphicon-upload"></span> Upload games to Library

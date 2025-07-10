@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User Usage - ChessFlask</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <style>
+        .usage-kpi-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 32px;
+            justify-content: center;
+            margin-bottom: 32px;
+        }
+        .usage-kpi-card {
+            background: linear-gradient(90deg,#e3e9f7 60%,#b6c6e6 100%);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px #1976d233;
+            padding: 18px 24px;
+            min-width: 220px;
+            flex: 1 1 220px;
+            text-align: center;
+        }
+        .usage-kpi-label {
+            font-size: 1.1em;
+            color: #1976d2;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .usage-kpi-value {
+            font-size: 2.1em;
+            font-weight: 800;
+            color: #222;
+        }
+        .usage-chart-section {
+            margin-top: 32px;
+        }
+        .usage-chart-title {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #1976d2;
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+<body>
+    <button id="menuBtn" class="btn btn-default" style="position:fixed;left:8px;top:8px;font-size:1.5em;background:none;border:none;color:#fff;box-shadow:none;padding:6px 10px;border-radius:50%;z-index:3002;transition:background 0.2s;" title="Menu">
+        <span class="glyphicon glyphicon-menu-hamburger"></span>
+    </button>
+    <nav class="navbar navbar-default navbar-fixed-top" style="background: #232a34; border: none; box-shadow: 0 2px 12px #0008;">
+      <div class="container-fluid" style="position:relative; display: flex; align-items: center; justify-content: space-between; min-height: 64px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+              <img src="{{ url_for('static', filename='logo/chess club icon.png') }}" alt="Chess Club Icon" style="height:40px;width:auto;filter:drop-shadow(0 2px 8px #0008); margin-left:52px;">
+              <img src="{{ url_for('static', filename='logo/chess club text.png') }}" alt="Chess Club Text" style="height:36px;width:auto;filter:drop-shadow(0 2px 8px #0008);">
+          </div>
+          <div style="margin-left:auto; display: flex; align-items: center; gap: 16px;">
+              <div id="topbarUserCard" style="display: flex; align-items: center; gap: 10px; background: linear-gradient(90deg,#e3e9f7 60%,#b6c6e6 100%); border-radius: 10px; box-shadow: 0 2px 8px #1976d233; padding: 7px 14px 7px 8px;">
+                  <div style="width: 36px; height: 36px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                      <img src="https://ui-avatars.com/api/?name={{ session['username']|default('User') }}&background=1976d2&color=fff&size=36" alt="Profile" style="width: 36px; height: 36px; object-fit: cover; border-radius: 50%;">
+                  </div>
+                  <div style="display: flex; flex-direction: column; align-items: flex-start; min-width: 0;">
+                      <div style="font-size: 1em; font-weight: 700; color: #1976d2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:90px;">{{ session['username']|default('User') }}</div>
+                      <div style="font-size: 0.9em; color: #888;">Signed in</div>
+                  </div>
+              </div>
+              <button class="btn btn-default" id="logoffBtn" style="font-size:1.5em; background: none; border: none; color: #fff; box-shadow: none; padding: 6px 10px; border-radius: 50%; transition: background 0.2s;" title="Logoff" onclick="window.location.href='/logoff'">
+                  <span class="glyphicon glyphicon-log-out"></span>
+              </button>
+          </div>
+      </div>
+    </nav>
+    <div id="sidebarMenu" style="position:fixed;top:0;left:0;width:240px;height:100vh;background:#232a34;box-shadow:2px 0 12px #0002;z-index:2000;transform:translateX(-100%);transition:transform 0.25s;display:flex;flex-direction:column;padding-top:40px;">
+        {% include 'sidebar_menu.html' with context %}
+    </div>
+    <script>
+    $(function(){
+        var sidebarOpen = false;
+        function toggleSidebar() {
+            sidebarOpen = !sidebarOpen;
+            $('#sidebarMenu').css('transform', sidebarOpen ? 'translateX(0)' : 'translateX(-100%)');
+        }
+        $('#menuBtn').on('click', function(){
+            toggleSidebar();
+        });
+        $(document).on('mousedown',function(e){
+            if(sidebarOpen && !$(e.target).closest('#sidebarMenu,#menuBtn').length){
+                toggleSidebar();
+            }
+        });
+        $('#playMenuToggle').on('click', function(e){
+            e.preventDefault();
+            var submenu = $('#playSubMenu');
+            var arrow = $('#playMenuArrow');
+            submenu.slideToggle(120);
+            arrow.html(submenu.is(':visible') ? '&#9660;' : '&#9654;');
+        });
+    });
+    </script>
+    <div class="play-container">
+        <div class="play-card" style="max-width: 1100px; width: 100%; display: flex; flex-direction: column; align-items: center;">
+            <div class="play-title" style="margin-bottom: 24px;">User Usage & Platform KPIs</div>
+            <div class="usage-kpi-row">
+                <div class="usage-kpi-card">
+                    <div class="usage-kpi-label">Total Logins</div>
+                    <div class="usage-kpi-value" id="kpiTotalLogins">-</div>
+                </div>
+                <div class="usage-kpi-card">
+                    <div class="usage-kpi-label">Total Time Spent (hrs)</div>
+                    <div class="usage-kpi-value" id="kpiTotalTime">-</div>
+                </div>
+                <div class="usage-kpi-card">
+                    <div class="usage-kpi-label">Unique Users</div>
+                    <div class="usage-kpi-value" id="kpiUniqueUsers">-</div>
+                </div>
+            </div>
+            <div class="usage-chart-section">
+                <div class="usage-chart-title">Logins Over Time</div>
+                <canvas id="loginsChart" height="80"></canvas>
+            </div>
+            <div class="usage-chart-section">
+                <div class="usage-chart-title">Time Spent by Page</div>
+                <canvas id="timeByPageChart" height="80"></canvas>
+            </div>
+            <div class="usage-chart-section">
+                <div class="usage-chart-title">Page Visits</div>
+                <canvas id="pageVisitsChart" height="80"></canvas>
+            </div>
+        </div>
+    </div>
+    <script>
+    function secondsToHours(s) {
+        return (s/3600).toFixed(1);
+    }
+    fetch('/api/user-usage').then(r => r.json()).then(data => {
+        document.getElementById('kpiTotalLogins').textContent = data.total_logins;
+        document.getElementById('kpiTotalTime').textContent = secondsToHours(data.total_time);
+        document.getElementById('kpiUniqueUsers').textContent = data.unique_users;
+
+        // Logins Over Time
+        const loginsLabels = data.logins_over_time.map(x => x.date);
+        const loginsCounts = data.logins_over_time.map(x => x.count);
+        new Chart(document.getElementById('loginsChart').getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: loginsLabels,
+                datasets: [{
+                    label: 'Logins',
+                    data: loginsCounts,
+                    borderColor: '#1976d2',
+                    backgroundColor: 'rgba(25,118,210,0.12)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                plugins: {legend: {display: false}},
+                scales: {y: {beginAtZero: true}}
+            }
+        });
+
+        // Time Spent by Page
+        const timePageLabels = data.time_by_page.map(x => x.page);
+        const timePageData = data.time_by_page.map(x => (x.seconds/60).toFixed(1));
+        new Chart(document.getElementById('timeByPageChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: timePageLabels,
+                datasets: [{
+                    label: 'Minutes Spent',
+                    data: timePageData,
+                    backgroundColor: '#64b5f6',
+                    borderColor: '#1976d2',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                plugins: {legend: {display: false}},
+                scales: {y: {beginAtZero: true}}
+            }
+        });
+
+        // Page Visits
+        const pageVisitLabels = data.page_visits.map(x => x.page);
+        const pageVisitData = data.page_visits.map(x => x.count);
+        new Chart(document.getElementById('pageVisitsChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: pageVisitLabels,
+                datasets: [{
+                    label: 'Visits',
+                    data: pageVisitData,
+                    backgroundColor: '#ffe082',
+                    borderColor: '#ffb300',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                plugins: {legend: {display: false}},
+                scales: {y: {beginAtZero: true}}
+            }
+        });
+    });
+    </script>
+</body>
+</html> 

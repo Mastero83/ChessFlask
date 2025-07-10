@@ -77,6 +77,65 @@ body {
     display: flex;
     flex-direction: row;
     align-items: flex-start;
+    justify-content: center;
+    position: relative;
+}
+#evalBarContainer {
+    display: none;
+    width: 24px;
+    height: 100%;
+    min-height: 320px;
+    max-height: 480px;
+    margin-right: 2px;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+#evalBar {
+    width: 16px;
+    height: 100%;
+    min-height: 320px;
+    max-height: 480px;
+    border-radius: 8px;
+    background: #222;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: 2px solid #888;
+}
+#evalBarWhite {
+    width: 100%;
+    background: #fff;
+    transition: height 0.4s cubic-bezier(.4,2,.6,1);
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+#evalBarBlack {
+    width: 100%;
+    background: #111;
+    transition: height 0.4s cubic-bezier(.4,2,.6,1);
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+#evalBarScore {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    color: #222;
+    background: rgba(255,255,255,0.92);
+    border-radius: 6px;
+    font-size: 0.95em;
+    font-weight: 700;
+    padding: 2px 7px;
+    pointer-events: none;
+    z-index: 2;
+    box-shadow: 0 1px 4px #0001;
+    display: none;
+}
+#evalBar:hover #evalBarScore, #evalBar:focus #evalBarScore {
+    display: block;
 }
 
 #aiAssistantPanel .panel-heading {
