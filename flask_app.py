@@ -209,9 +209,24 @@ def get_pgn_game(job_id, index):
     game.accept(exporter)
     return out.getvalue()
 
-@app.route('/move/<int:depth>/<path:fen>/')
+@app.route('/move/<int:depth>/<path:fen>/', methods=['GET', 'POST'])
 def get_move(depth, fen):
-    sf = StockfishEngine(depth=depth)
+    # Accept engine settings from frontend
+    engine_settings = request.args.get('engine_settings')
+    if not engine_settings and request.is_json:
+        engine_settings = request.get_json().get('engine_settings')
+    import json
+    params = None
+    if engine_settings:
+        if isinstance(engine_settings, str):
+            params = json.loads(engine_settings)
+        else:
+            params = engine_settings
+    # If ELO settings are provided, ignore depth and use only ELO
+    if params and params.get('UCI_LimitStrength') == 'true' and 'UCI_Elo' in params:
+        sf = StockfishEngine(parameters=params)
+    else:
+        sf = StockfishEngine(depth=depth, parameters=params)
     sf.set_fen(fen)
     move = sf.get_best_move()
     return move or ''

@@ -355,9 +355,12 @@ if __name__=="__main__":
 
 # --- Stockfish Integration ---
 class StockfishEngine:
-    def __init__(self, depth=15):
+    def __init__(self, depth=15, parameters=None):
         stockfish_path = os.path.join(os.path.dirname(__file__), 'stockfish', 'stockfish.exe')
-        self.engine = Stockfish(path=stockfish_path, depth=depth)
+        if parameters is not None:
+            self.engine = Stockfish(path=stockfish_path, depth=depth, parameters=parameters)
+        else:
+            self.engine = Stockfish(path=stockfish_path, depth=depth)
 
     def set_fen(self, fen):
         self.engine.set_fen_position(fen)

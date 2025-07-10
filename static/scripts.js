@@ -128,11 +128,68 @@ var randomResponse = function() {
     })
 }
 
+// === ELO Mapping ===
+function depthToElo(depth) {
+    // Approximate mapping for simple engines
+    var map = {1: 800, 2: 1100, 3: 1400, 4: 1700, 5: 2000};
+    return map[depth] || (800 + depth * 400);
+}
+
+function updateEloDisplay() {
+    var slider = document.getElementById("engineDepthSlider");
+    var depth = parseInt(slider.value, 10);
+    var elo = depthToElo(depth);
+    document.getElementById('eloDisplay').innerText = 'ELO: ' + elo;
+}
+
+function updateEngineDepthValue() {
+    var slider = document.getElementById("engineDepthSlider");
+    var value = slider.value;
+    document.getElementById('engineDepthValue').innerText = value;
+    // Directly update the stockfishDepth span
+    var stockfishDepthSpan = document.getElementById('stockfishDepth');
+    if (stockfishDepthSpan) {
+        stockfishDepthSpan.innerText = value;
+    }
+}
+
+function getEngineSettings() {
+    return {
+        UCI_LimitStrength: "true",
+        UCI_Elo: parseInt(document.getElementById('engineEloSlider').value, 10)
+    };
+}
+
+function updateEngineEloValue() {
+    var slider = document.getElementById('engineEloSlider');
+    document.getElementById('engineEloValue').innerText = slider.value;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var eloSlider = document.getElementById('engineEloSlider');
+    if (eloSlider) {
+        eloSlider.addEventListener('input', updateEngineEloValue);
+        updateEngineEloValue();
+    }
+    var muteBtn = document.getElementById('muteBtn');
+    if (muteBtn) muteBtn.addEventListener('click', toggleMute);
+    var volSlider = document.getElementById('volSlider');
+    if (volSlider) volSlider.addEventListener('input', function() {
+        setVolume(this.value);
+    });
+    var skillSlider = document.getElementById('engineSkillLevel');
+    if (skillSlider) {
+        skillSlider.addEventListener('input', updateEngineSkillLevelValue);
+        updateEngineSkillLevelValue();
+    }
+});
+
 var getResponseMove = function() {
-    var e = document.getElementById("sel1");
-    var depth = e.options[e.selectedIndex].value;
+    var slider = document.getElementById("engineDepthSlider");
+    var depth = slider ? slider.value : 2;
     fen = game.fen();
-    $.get('/move/' + depth + '/' + encodeURIComponent(fen) + '/', function(data) {
+    var engineSettings = getEngineSettings();
+    $.get('/move/' + depth + '/' + encodeURIComponent(fen) + '/', { engine_settings: engineSettings }, function(data) {
         var move = game.move(data, {sloppy: true});
         // Play sound: check if capture
         playMoveSound(move && !!move.captured);
@@ -296,16 +353,25 @@ function depthToElo(depth) {
 }
 
 function updateEloDisplay() {
-    var e = document.getElementById("sel1");
-    var depth = e.options[e.selectedIndex].value;
+    var slider = document.getElementById("engineDepthSlider");
+    var depth = parseInt(slider.value, 10);
     var elo = depthToElo(depth);
     document.getElementById('eloDisplay').innerText = 'ELO: ' + elo;
 }
 
+function updateEngineDepthValue() {
+    var slider = document.getElementById("engineDepthSlider");
+    document.getElementById('engineDepthValue').innerText = slider.value;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    var sel = document.getElementById('sel1');
-    if (sel) sel.addEventListener('change', updateEloDisplay);
-    updateEloDisplay();
+    var slider = document.getElementById('engineDepthSlider');
+    if (slider) {
+        slider.addEventListener('input', function() {
+            updateEngineDepthValue();
+        });
+        updateEngineDepthValue();
+    }
     var muteBtn = document.getElementById('muteBtn');
     if (muteBtn) muteBtn.addEventListener('click', toggleMute);
     var volSlider = document.getElementById('volSlider');
@@ -753,24 +819,30 @@ var showGameOverOverlay = function(winner, moves, reason) {
                 'Blunder': '😱 (??)'
             };
             // Calculate accuracy per color
-            var accuracy = calculateAccuracyByColor(evals);
+            var accuracy = calculateAccuracyByColor(evals); // This uses the same evals as move classification
             var html = '';
-            html += '<div style="display:flex; gap:18px; justify-content:center; align-items:center; margin-bottom:16px;">';
-            html += '<div style="background:linear-gradient(120deg,#fff,#e3e3e3);border-radius:12px;box-shadow:0 2px 12px #1976d233;padding:18px 28px;display:flex;flex-direction:column;align-items:center;min-width:120px;">';
-            html += '<span style="font-size:2.2em; color:#1976d2; font-weight:900; line-height:1;">&#9812;</span>';
-            html += '<span style="font-size:2.1em; font-weight:800; color:#1976d2;">' + accuracy.white + '%</span>';
-            html += '<span style="font-size:1.1em; color:#555; font-weight:600; margin-top:2px;">White Accuracy</span>';
+            html += '<div style="display:flex; gap:10px; justify-content:center; align-items:center; margin-bottom:10px;">';
+            html += '<div style="background:linear-gradient(120deg,#fff,#e3e3e3);border-radius:10px;box-shadow:0 1px 6px #1976d233;padding:8px 12px;display:flex;flex-direction:column;align-items:center;min-width:70px;">';
+            html += '<span style="font-size:1.1em; color:#1976d2; font-weight:700; line-height:1;">&#9812;</span>';
+            html += '<span style="font-size:1em; font-weight:600; color:#1976d2;">' + accuracy.white + '%</span>';
+            html += '<span style="font-size:0.85em; color:#555; font-weight:400; margin-top:2px;">White</span>';
             html += '</div>';
-            html += '<div style="background:linear-gradient(120deg,#222,#444);border-radius:12px;box-shadow:0 2px 12px #0003;padding:18px 28px;display:flex;flex-direction:column;align-items:center;min-width:120px;">';
-            html += '<span style="font-size:2.2em; color:#ffd600; font-weight:900; line-height:1;">&#9818;</span>';
-            html += '<span style="font-size:2.1em; font-weight:800; color:#ffd600;">' + accuracy.black + '%</span>';
-            html += '<span style="font-size:1.1em; color:#eee; font-weight:600; margin-top:2px;">Black Accuracy</span>';
+            html += '<div style="background:linear-gradient(120deg,#222,#444);border-radius:10px;box-shadow:0 1px 6px #0003;padding:8px 12px;display:flex;flex-direction:column;align-items:center;min-width:70px;">';
+            html += '<span style="font-size:1.1em; color:#ffd600; font-weight:700; line-height:1;">&#9818;</span>';
+            html += '<span style="font-size:1em; font-weight:600; color:#ffd600;">' + accuracy.black + '%</span>';
+            html += '<span style="font-size:0.85em; color:#eee; font-weight:400; margin-top:2px;">Black</span>';
             html += '</div>';
             html += '</div>';
-            html += '<table class="table table-bordered" style="margin-top:12px; font-size:1.1em;">';
-            html += '<thead><tr><th>Type</th><th style="color:#1976d2;">White</th><th style="color:#388e3c;">Black</th></tr></thead><tbody>';
-            for (var key in moveTypeEmojis) {
-                html += '<tr><td>' + moveTypeEmojis[key] + '</td><td>' + (summary.white[key] || 0) + '</td><td>' + (summary.black[key] || 0) + '</td></tr>';
+            html += '<table class="table table-bordered" style="margin-top:4px; font-size:0.92em; border-radius:6px; overflow:hidden; background:#fafbfc;">';
+            html += '<thead><tr style="background:#f0f2f5;"><th style="font-weight:600;">Move Type</th><th style="color:#1976d2; font-weight:600;">White</th><th style="color:#388e3c; font-weight:600;">Black</th></tr></thead><tbody>';
+            var moveTypes = [ 'Brilliant', 'Best', 'Excellent', 'Good', 'Inaccuracy', 'Mistake', 'Blunder' ];
+            for (var i = 0; i < moveTypes.length; i++) {
+                var key = moveTypes[i];
+                html += '<tr>';
+                html += '<td style="padding:2px 6px;">' + key + '</td>';
+                html += '<td style="padding:2px 6px; text-align:center;">' + (summary.white[key] || 0) + '</td>';
+                html += '<td style="padding:2px 6px; text-align:center;">' + (summary.black[key] || 0) + '</td>';
+                html += '</tr>';
             }
             html += '</tbody></table>';
             $('#gameSummaryTableWrapper').html(html);
@@ -982,8 +1054,9 @@ $(document).on('click', '#closeGameOverBtn', function() {
 });
 
 // Classify moves based on evaluation change, split by color
-function classifyMovesWithEvalsByColor(evals) {
-    var types = [ 'Brilliant', 'Best', 'Excellent', 'Good', 'Inaccuracy', 'Mistake', 'Blunder' ];
+function classifyMovesWithEvalsByColor(evals, moveDetails) {
+    // moveDetails: array of move objects (optional, for future tactical detection)
+    var types = [ 'Brilliant', 'Best', 'Excellent', 'Good', 'Inaccuracy', 'Mistake', 'Blunder', 'Forced Move' ];
     var summary = { white: {}, black: {} };
     types.forEach(function(t) { summary.white[t] = 0; summary.black[t] = 0; });
     if (!evals || evals.length < 2) return summary;
@@ -992,18 +1065,27 @@ function classifyMovesWithEvalsByColor(evals) {
         var absDiff = Math.abs(diff);
         var color = (i % 2 === 1) ? 'white' : 'black';
         var type = 'Good';
-        if (absDiff < 20) type = 'Best';
-        else if (absDiff < 50) type = 'Excellent';
-        else if (absDiff < 100) type = 'Good';
-        else if (absDiff < 200) type = 'Inaccuracy';
-        else if (absDiff < 350) type = 'Mistake';
-        else type = 'Blunder';
+        // Forced Move: if only one move avoids a drop > 300cp (placeholder, needs engine multi-move info)
+        if (moveDetails && moveDetails[i-1] && moveDetails[i-1].forced) {
+            type = 'Forced Move';
+        } else if (absDiff > 300) {
+            type = 'Blunder';
+        } else if (absDiff > 150) {
+            type = 'Mistake';
+        } else if (absDiff > 50) {
+            type = 'Inaccuracy';
+        } else if (absDiff > 20) {
+            type = 'Good';
+        } else if (absDiff > 10) {
+            type = 'Excellent';
+        } else {
+            type = 'Best';
+        }
+        // Placeholder for Brilliant: if move is a sacrifice or only move, and absDiff < 50
+        if (moveDetails && moveDetails[i-1] && moveDetails[i-1].brilliant) {
+            type = 'Brilliant';
+        }
         summary[color][type]++;
-    }
-    // Optionally, mark the best move as Brilliant for each color
-    if (evals.length > 2) {
-        summary.white['Brilliant'] = 1;
-        summary.black['Brilliant'] = 1;
     }
     return summary;
 }
