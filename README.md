@@ -1,7 +1,7 @@
-# ChessFlask: Mastermind Arena
+# ChessClub AI Assistant
 
-## ♟️ Why ChessFlask?
-ChessFlask is the ultimate modern chess web app for players, club enthusiasts, and learners. Powered by Stockfish, it combines world-class analysis, a beautiful interface, and unique features you won't find anywhere else. Whether you want to play, analyze your club games, or explore openings, ChessFlask is your new chess home.
+## ♟️ Why ChessClub AI Assistant?
+ChessClub AI Assistant is the ultimate modern chess web app for players, club enthusiasts, and learners. Powered by Stockfish, it combines world-class analysis, a beautiful interface, and unique features you won't find anywhere else. Whether you want to play, analyze your club games, or explore openings, ChessClub AI Assistant is your new chess home.
 
 ---
 
@@ -10,10 +10,11 @@ ChessFlask is the ultimate modern chess web app for players, club enthusiasts, a
 - **Stockfish-Powered Play & Analysis**: Every move, hint, and analysis is backed by the world's strongest chess engine.
 - **Engine ELO Slider**: Set Stockfish's playing strength with a single, intuitive ELO slider (800–2500). Advanced engine settings are now handled automatically for a simpler, more user-friendly experience.
 - **Real-Time Evaluation Bar**: See who's winning at a glance with a modern, vertical evaluation bar. The bar updates in real time, always shows the correct color orientation (white on your side), and can be toggled on/off in settings.
-- **Move Information Panel**: The moves table and move navigation controls are now grouped in a dedicated, collapsible 'Move Information' panel for a cleaner, more organized interface.
+- **Move Evaluation (CPL)**: Instantly see the centipawn loss for every move, for both players, in a beautiful, color-coded table. Toggle this feature in advanced settings.
+- **Move Information Panel**: The moves table and move navigation controls are now grouped in a dedicated, collapsible 'Move Information' panel for a cleaner, more organized interface. Includes a play button for automatic move playback.
 - **Cheat Panel with Depth Slider**: Instantly see the best moves at any depth (1–20) with a compact, toggleable cheat panel—perfect for learning or "cheating." Now with improved UI and slider placement.
 - **MongoDB-Backed Game Library**: Upload PGN files, filter/search games, and save to your personal library with statistics and opening selection. Requires MongoDB for full functionality.
-- **Move Navigation**: Step through your game with first/last/next/previous controls and a move number field.
+- **Move Navigation**: Step through your game with first/last/next/previous controls, a move number field, and a new play button for auto-playback.
 - **Accuracy Boxes**: After each game, see your accuracy (and your opponent's) in gorgeous, color-coded summary boxes—just like chess.com, but better.
 - **Game Summary Table**: Instantly see how many brilliants, bests, goods, inaccuracies, mistakes, and blunders you made, split by color, with emoticons.
 - **Openings Explorer**: Upload a PGN, filter by move sequence, and visually explore openings with a live board and move selection.
@@ -66,6 +67,6 @@ ChessFlask is the ultimate modern chess web app for players, club enthusiasts, a
 ---
 
 ## 🙏 Credits
-Based on [brokenloop/FlaskChess](https://github.com/brokenloop/FlaskChess) and extended by the ChessFlask community. Special thanks to all contributors!
+Based on [brokenloop/FlaskChess](https://github.com/brokenloop/FlaskChess) and extended by the ChessClub AI Assistant community. Special thanks to all contributors!
 
-Enjoy playing, learning, and mastering chess with ChessFlask! 
+Enjoy playing, learning, and mastering chess with ChessClub AI Assistant! 

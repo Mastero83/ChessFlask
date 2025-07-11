@@ -459,13 +459,16 @@
     $('#resetBoardBtn').on('click', function() {
         chess.reset();
         board.position('start');
-        renderLibraryTable(allGames);
+        filterGamesByMoves();
         updateBoardOverlay();
     });
     $('#toggleTableBtn').on('click', function() {
         tableVisible = !tableVisible;
         document.getElementById('tableSection').style.display = tableVisible ? '' : 'none';
         this.textContent = tableVisible ? 'Hide Table & Search' : 'Show Table & Search';
+        if (tableVisible) {
+            filterGamesByMoves();
+        }
     });
     // Patch: on page load, only load allGamesRaw, and don't show board until opening is selected
     $(function() {
@@ -510,6 +513,41 @@
             board.position(chess.fen());
             updateBoardOverlay();
         }
+    });
+    // Add undo and navigation handlers to always call filterGamesByMoves after board changes
+    $('#undoMoveBtn').on('click', function() {
+        chess.undo();
+        board.position(chess.fen());
+        filterGamesByMoves();
+        updateBoardOverlay();
+    });
+    $('#firstMoveBtn').on('click', function() {
+        while (chess.history().length > 0) chess.undo();
+        board.position('start');
+        filterGamesByMoves();
+        updateBoardOverlay();
+    });
+    $('#lastMoveBtn').on('click', function() {
+        // Assuming you have a way to replay all moves
+        chess.reset();
+        (currentGameMoves || []).forEach(function(m) { chess.move(m); });
+        board.position(chess.fen());
+        filterGamesByMoves();
+        updateBoardOverlay();
+    });
+    $('#prevMoveBtn').on('click', function() {
+        chess.undo();
+        board.position(chess.fen());
+        filterGamesByMoves();
+        updateBoardOverlay();
+    });
+    $('#nextMoveBtn').on('click', function() {
+        // Assuming you have a way to step forward
+        // Implement as needed
+        // After stepping forward:
+        board.position(chess.fen());
+        filterGamesByMoves();
+        updateBoardOverlay();
     });
     </script>
 </body>

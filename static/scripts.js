@@ -204,7 +204,146 @@ var setPGN = function() {
   var move = pgn[pgn.length - 1];
 }
 
+var moveEvalCache = {};
+
+function getFenBeforeMove(moveIndex) {
+    // Returns the FEN before the move at moveIndex (0-based ply)
+    var tempGame = new Chess();
+    var history = game.history({ verbose: true });
+    for (var i = 0; i < moveIndex; i++) {
+        tempGame.move(history[i]);
+    }
+    return tempGame.fen();
+}
+
+async function getEvalForFen(fen) {
+    if (moveEvalCache[fen] !== undefined) return moveEvalCache[fen];
+    return new Promise(function(resolve) {
+        $.get('/eval/' + encodeURIComponent(fen) + '/', function(score) {
+            var val = 0;
+            if (typeof score === 'string' && score.indexOf('mate') !== -1) {
+                val = score.startsWith('mate -') ? -10000 : 10000;
+            } else if (!isNaN(parseFloat(score))) {
+                val = parseFloat(score);
+            } else {
+                val = null; // error fallback
+            }
+            moveEvalCache[fen] = val;
+            resolve(val);
+        }).fail(function() {
+            moveEvalCache[fen] = null;
+            resolve(null);
+        });
+    });
+}
+
+async function getCplForMove(moveIndex) {
+    // CPL = |eval_after - eval_before|, always positive
+    var fenBefore = getFenBeforeMove(moveIndex);
+    var fenAfter = getFenBeforeMove(moveIndex + 1);
+    var evalBefore = await getEvalForFen(fenBefore);
+    var evalAfter = await getEvalForFen(fenAfter);
+    return Math.abs(evalAfter - evalBefore);
+}
+
+// Add loading indicator for CPL
+async function createTableWithCPL() {
+    const pgn = game.pgn().replace(/(\[.*?\]\s*)+/g, '').trim();
+    const moves = pgn.split(/\s+/);
+    const history = game.history({ verbose: true });
+    const data = [];
+    for (let i = 0; i < moves.length; i += 3) {
+        data.push({
+            moveNumber: moves[i] || '',
+            whiteMove: moves[i + 1] || '',
+            blackMove: moves[i + 2] || ''
+        });
+    }
+
+    // Build FENs for before and after each ply
+    let tempGame = new Chess();
+    const fens = [tempGame.fen()];
+    for (let i = 0; i < history.length; i++) {
+        tempGame.move(history[i]);
+        fens.push(tempGame.fen());
+    }
+
+    // Fetch evals for all FENs with debug output
+    const evals = await Promise.all(fens.map(fen =>
+        fetch(`/eval/${encodeURIComponent(fen)}/`)
+            .then(r => r.text())
+            .then(score => {
+                console.log('FEN:', fen, 'Eval:', score); // Debug output
+                if (score.includes('mate')) return score.startsWith('mate -') ? -10000 : 10000;
+                const val = parseFloat(score);
+                return isNaN(val) ? null : val;
+            })
+            .catch((e) => { console.log('Eval fetch error:', e); return null; })
+    ));
+
+    // Compute CPLs
+    const cplWhite = [], cplBlack = [];
+    for (let i = 1; i < evals.length; i += 2) {
+        cplWhite.push(evals[i] != null && evals[i - 1] != null ? Math.abs(evals[i] - evals[i - 1]) : '-');
+        cplBlack.push(evals[i + 1] != null && evals[i] != null ? Math.abs(evals[i + 1] - evals[i]) : '-');
+    }
+
+    // Render table
+    $('#pgn tr').not(':first').remove();
+    let html = '';
+    for (let i = 0; i < data.length; i++) {
+        html += `<tr>
+            <td>${data[i].moveNumber}</td>
+            <td>${data[i].whiteMove}</td>
+            <td>${cplWhite[i] !== undefined ? `<span style="color:#1976d2;font-weight:bold;">${cplWhite[i]}</span>` : ''}</td>
+            <td>${data[i].blackMove}</td>
+            <td>${cplBlack[i] !== undefined ? `<span style="color:#d32f2f;font-weight:bold;">${cplBlack[i]}</span>` : ''}</td>
+        </tr>`;
+    }
+    $('#pgn tr').first().after(html);
+}
+
+// Ensure table updates on move, new game, take back, and toggle
+function updateMoveTable() {
+    moveEvalCache = {}; // Clear cache to avoid stale evals
+    createTable();
+}
+
+// Patch updateStatus to update move table
+var oldUpdateStatus = updateStatus;
+updateStatus = function() {
+    oldUpdateStatus.apply(this, arguments);
+    updateMoveTable();
+};
+
+// Patch takeBack and newGame to update move table
+var oldTakeBack = takeBack;
+takeBack = function() {
+    oldTakeBack.apply(this, arguments);
+    updateMoveTable();
+};
+var oldNewGame = newGame;
+newGame = function() {
+    oldNewGame.apply(this, arguments);
+    updateMoveTable();
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    var toggle = document.getElementById('toggleMoveEval');
+    if (toggle) {
+        toggle.addEventListener('change', function() {
+            updateMoveTable();
+        });
+    }
+    // Initial table render
+    updateMoveTable();
+});
+
 var createTable = function() {
+    if (document.getElementById('toggleMoveEval')?.checked) {
+        createTableWithCPL();
+        return;
+    }
     var pgn = game.pgn();
     // Remove header lines
     pgn = pgn.replace(/(\[.*?\]\s*)+/g, '').trim();
@@ -233,8 +372,8 @@ var createTable = function() {
     var html = '';
     for (var i = 0; i < data.length; i++) {
         html += '<tr><td>' + data[i].moveNumber + '</td><td>'
-        + data[i].whiteMove + '</td><td>'
-        + data[i].blackMove + '</td></tr>';
+        + data[i].whiteMove + '</td><td></td><td>'
+        + data[i].blackMove + '</td><td></td></tr>';
     }
     $('#pgn tr').first().after(html);
 }
@@ -1298,3 +1437,87 @@ function safeBoardResize() {
     board.resize();
     attachClickToMoveHandler();
 }
+
+let playMovesInterval = null;
+let isPlayingMoves = false;
+
+function setMoveNavDisabled(disabled) {
+    const btns = [
+        '#moveNavFirst', '#moveNavBack', '#moveNavForward', '#moveNavLast', '#moveNavNumber', '#downloadPgnBtn', '#playMovesBtn'
+    ];
+    btns.forEach(sel => {
+        const el = document.querySelector(sel);
+        if (el) el.disabled = disabled;
+    });
+}
+
+function stopMovePlayback() {
+    if (playMovesInterval) clearInterval(playMovesInterval);
+    playMovesInterval = null;
+    isPlayingMoves = false;
+    setMoveNavDisabled(false);
+    const playBtn = document.getElementById('playMovesBtn');
+    if (playBtn) playBtn.classList.remove('playing');
+}
+
+function playMoves() {
+    if (isPlayingMoves) {
+        stopMovePlayback();
+        return;
+    }
+    isPlayingMoves = true;
+    setMoveNavDisabled(true);
+    const playBtn = document.getElementById('playMovesBtn');
+    if (playBtn) playBtn.classList.add('playing');
+    // Start from current move
+    let current = parseInt(document.getElementById('moveNavNumber').value, 10) || 0;
+    const total = parseInt(document.getElementById('moveNavTotal').textContent.replace('/','').trim(), 10) || 0;
+    function step() {
+        if (!isPlayingMoves) return;
+        if (current >= total) {
+            stopMovePlayback();
+            return;
+        }
+        document.getElementById('moveNavNumber').value = current + 1;
+        // Trigger move navigation (simulate user input)
+        const event = new Event('change', { bubbles: true });
+        document.getElementById('moveNavNumber').dispatchEvent(event);
+        current++;
+        if (current < total) {
+            playMovesInterval = setTimeout(step, 1200);
+        } else {
+            stopMovePlayback();
+        }
+    }
+    step();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // ... existing code ...
+    const playBtn = document.getElementById('playMovesBtn');
+    if (playBtn) {
+        playBtn.addEventListener('click', playMoves);
+    }
+    // Stop playback if user interacts with nav
+    ['moveNavFirst','moveNavBack','moveNavForward','moveNavLast','moveNavNumber'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('click', stopMovePlayback);
+            el.addEventListener('change', stopMovePlayback);
+        }
+    });
+});
+
+// Add CSS for play button animation
+const style = document.createElement('style');
+style.innerHTML = `
+.move-nav-btn.playing {
+  background: linear-gradient(90deg, #43a047 60%, #81c784 100%) !important;
+  color: #fff !important;
+  animation: playPulse 1.2s infinite alternate;
+}
+@keyframes playPulse {
+  0% { box-shadow: 0 0 0 0 #43a04733; }
+  100% { box-shadow: 0 0 12px 6px #43a04733; }
+}`;
+document.head.appendChild(style);

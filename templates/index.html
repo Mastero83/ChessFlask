@@ -212,6 +212,137 @@
                 margin-bottom: 8px;
                 font-size: 1.1em;
             }
+            .move-eval-table {
+              width: 100%;
+              border-collapse: separate;
+              border-spacing: 0;
+              background: #f8fafd;
+              border-radius: 14px;
+              overflow: hidden;
+              box-shadow: 0 2px 12px #1976d211;
+              margin-bottom: 10px;
+            }
+            .move-eval-table thead th {
+              background: linear-gradient(90deg, #1976d2 60%, #64b5f6 100%);
+              color: #fff;
+              font-weight: 700;
+              font-size: 1.08em;
+              border: none;
+              padding: 10px 8px;
+              text-align: center;
+              letter-spacing: 0.5px;
+            }
+            .move-eval-table tbody tr {
+              transition: background 0.18s;
+            }
+            .move-eval-table tbody tr:nth-child(even) {
+              background: #e3e9f7;
+            }
+            .move-eval-table tbody tr:nth-child(odd) {
+              background: #f8fafd;
+            }
+            .move-eval-table tbody tr:hover {
+              background: #dbeafe;
+            }
+            .move-eval-table td {
+              padding: 8px 6px;
+              text-align: center;
+              font-size: 1.05em;
+              border: none;
+            }
+            .move-eval-table td span {
+              display: inline-block;
+              min-width: 32px;
+              border-radius: 6px;
+              padding: 2px 6px;
+            }
+            .move-eval-table td span[style*='color:#1976d2'] {
+              background: #e3f2fd;
+            }
+            .move-eval-table td span[style*='color:#d32f2f'] {
+              background: #ffebee;
+            }
+            .move-eval-table .cpl-loading {
+              color: #aaa;
+              font-style: italic;
+            }
+            .move-eval-table thead th:first-child {
+              border-radius: 14px 0 0 0;
+            }
+            .move-eval-table thead th:last-child {
+              border-radius: 0 14px 0 0;
+            }
+            .move-eval-table tbody tr:last-child td:first-child {
+              border-radius: 0 0 0 14px;
+            }
+            .move-eval-table tbody tr:last-child td:last-child {
+              border-radius: 0 0 14px 0;
+            }
+            .move-eval-legend {
+              font-size: 0.98em;
+              margin-bottom: 6px;
+              color: #1976d2;
+              display: flex;
+              align-items: center;
+              gap: 18px;
+              justify-content: flex-end;
+            }
+            .move-eval-legend span {
+              display: inline-block;
+              min-width: 32px;
+              border-radius: 6px;
+              padding: 2px 6px;
+              font-weight: bold;
+              margin-left: 4px;
+            }
+            .move-eval-legend .cpl-white { background: #e3f2fd; color: #1976d2; }
+            .move-eval-legend .cpl-black { background: #ffebee; color: #d32f2f; }
+            .move-nav-group {
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              gap: 12px;
+              margin-bottom: 8px;
+            }
+            .move-nav-btn {
+              background: linear-gradient(90deg, #1976d2 60%, #64b5f6 100%);
+              color: #fff;
+              border: none;
+              border-radius: 8px;
+              padding: 7px 14px;
+              font-size: 1.18em;
+              font-weight: 600;
+              box-shadow: 0 2px 8px #1976d211;
+              transition: background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.12s;
+              outline: none;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            .move-nav-btn:active {
+              transform: scale(0.97);
+            }
+            .move-nav-btn:hover, .move-nav-btn:focus {
+              background: linear-gradient(90deg, #1356a2 60%, #1976d2 100%);
+              color: #fff;
+              box-shadow: 0 4px 16px #1976d233;
+            }
+            .move-nav-btn[disabled] {
+              background: #b6c6e6;
+              color: #fff;
+              cursor: not-allowed;
+              opacity: 0.7;
+            }
+            #moveNavNumber {
+              width: 60px;
+              text-align: center;
+              font-weight: bold;
+              font-size: 1.1em;
+              border-radius: 6px;
+              border: 1px solid #bbb;
+              margin: 0 2px;
+            }
         </style>
     </head>
 
@@ -336,28 +467,32 @@
                             </div>
                             <div id="moveInfoPanel" class="panel-collapse collapse" role="tabpanel" aria-labelledby="moveInfoPanelHeading">
                                 <div class="panel-body" id="moveInfoPanelBody">
-                                    <button id="downloadPgnBtn" style="background: none; border: none; cursor: pointer; font-size: 1.4em; color: #888; z-index: 10; margin-bottom: 8px; float: right;" title="Import/Export PGN">
-                                        <span class="glyphicon glyphicon-transfer"></span>
-                                    </button>
-                                    <div style="clear: both;"></div>
-                                    <div id="moveNavControls" style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 8px;">
-                                        <button id="moveNavFirst" class="btn btn-default btn-sm" title="First Move"><span class="glyphicon glyphicon-step-backward"></span></button>
-                                        <button id="moveNavBack" class="btn btn-default btn-sm" title="Previous Move"><span class="glyphicon glyphicon-chevron-left"></span></button>
+                                    <div id="moveNavControls" class="move-nav-group" style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 8px;">
+                                        <button id="moveNavFirst" class="move-nav-btn" title="First Move"><span class="glyphicon glyphicon-step-backward"></span></button>
+                                        <button id="moveNavBack" class="move-nav-btn" title="Previous Move"><span class="glyphicon glyphicon-chevron-left"></span></button>
                                         <input id="moveNavNumber" type="number" min="0" value="0" style="width: 60px; text-align: center; font-weight: bold; font-size: 1.1em; border-radius: 6px; border: 1px solid #bbb;" title="Go to move number">
                                         <span id="moveNavTotal" style="font-size: 1.1em; color: #888;">/ 0</span>
-                                        <button id="moveNavForward" class="btn btn-default btn-sm" title="Next Move"><span class="glyphicon glyphicon-chevron-right"></span></button>
-                                        <button id="moveNavLast" class="btn btn-default btn-sm" title="Last Move"><span class="glyphicon glyphicon-step-forward"></span></button>
+                                        <button id="moveNavForward" class="move-nav-btn" title="Next Move"><span class="glyphicon glyphicon-chevron-right"></span></button>
+                                        <button id="moveNavLast" class="move-nav-btn" title="Last Move"><span class="glyphicon glyphicon-step-forward"></span></button>
+                                        <button id="playMovesBtn" class="move-nav-btn" title="Play through game"><span class="glyphicon glyphicon-play"></span></button>
+                                        <button id="downloadPgnBtn" class="move-nav-btn" title="Import/Export PGN"><span class="glyphicon glyphicon-transfer"></span></button>
                                     </div>
                                     <div id="moveTable">
-                                        <table class="table table-striped table-condensed" id="pgn">
+                                        <table class="move-eval-table" id="pgn" style="min-width: 100%;">
                                             <thead>
                                                 <tr>
                                                     <th>#</th>
                                                     <th>White</th>
+                                                    <th style="min-width:60px;">CPL</th>
                                                     <th>Black</th>
+                                                    <th style="min-width:60px;">CPL</th>
                                                 </tr>
                                             </thead>
                                         </table>
+                                    </div>
+                                    <div class="move-eval-legend">
+                                      <span class="cpl-white">White CPL</span>
+                                      <span class="cpl-black">Black CPL</span>
                                     </div>
                                 </div>
                             </div>
@@ -414,6 +549,10 @@
                                     <hr/>
                                     <label style="margin-bottom: 0;">
                                         <input type="checkbox" id="toggleEvalBar" style="margin-right: 5px;" checked>Show Evaluation Bar
+                                    </label>
+                                    <br/>
+                                    <label style="margin-bottom: 0; margin-top: 8px;">
+                                        <input type="checkbox" id="toggleMoveEval" style="margin-right: 5px;" checked>Show Move Evaluation (CPL)
                                     </label>
                                     <div style="margin-top: 12px;">
                                         <label for="boardSizeSlider" style="margin-right: 8px;">Board Size</label>

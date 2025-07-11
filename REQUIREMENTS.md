@@ -1,4 +1,4 @@
-# ChessFlask Requirements & Setup
+# ChessClub AI Assistant Requirements & Setup
 
 ## Dependencies
 - Python 3.7+
@@ -35,6 +35,9 @@ Then open your browser to [http://127.0.0.1:5000/](http://127.0.0.1:5000/)
 - Modern UI: startup, play, and login screens
 - Cheat panel with depth slider and improved layout
 - MongoDB-backed game library and PGN upload/filtering
+- Move evaluation (CPL) for every move, with toggle
+- Improved move information panel and navigation (with play button)
+- Table filtering: library table always matches filtered games
 - Play chess, analyze games, use cheat mode, and more!
 - See `RELEASE_NOTES.md` for new features.
 

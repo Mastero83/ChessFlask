@@ -87,7 +87,6 @@ MENU_ITEMS = [
     {'name': 'Play', 'url': '/play'},
     {'name': 'Library', 'url': '/library'},
     {'name': 'Upload', 'url': '/upload'},
-    {'name': 'Import from Chess.com', 'url': '/upload_chesscom'},
     {'name': 'Openings', 'url': '/openings'},
     {'name': 'Analysis (Placeholder)', 'url': '/analysis'},
     {'name': 'Annotate (Placeholder)', 'url': '/annotate'},
@@ -95,6 +94,9 @@ MENU_ITEMS = [
     {'name': 'Chess Club (Placeholder)', 'url': '/club'},
     {'name': 'Submit Ideas (Placeholder)', 'url': '/ideas'},
 ]
+
+# Remove chess.com import menu item
+MENU_ITEMS = [item for item in MENU_ITEMS if item.get('url') != '/upload_chesscom']
 
 @app.route('/startup')
 def startup():
@@ -572,78 +574,7 @@ def api_user_usage():
 import requests
 from flask import jsonify
 
-@app.route('/upload_chesscom')
-def upload_chesscom():
-    if 'username' not in session:
-        return redirect(url_for('login'))
-    return render_template('upload_chesscom.html', menu_items=MENU_ITEMS, current_page='Import from Chess.com')
-
-@app.route('/api/chesscom_games')
-def api_chesscom_games():
-    username = request.args.get('username', '').strip().lower()
-    filter_date = request.args.get('date')  # format: YYYY-MM
-    filter_type = request.args.get('type')  # e.g. 'blitz', 'rapid', etc.
-    filter_opponent = request.args.get('opponent', '').strip().lower()
-    filter_day = request.args.get('day')  # format: YYYY-MM-DD
-    if not username:
-        return jsonify({'error': 'Username is required.'}), 400
-    # Step 0: Check if user exists
-    profile_url = f'https://api.chess.com/pub/player/{username}'
-    try:
-        profile_resp = requests.get(profile_url, timeout=10)
-        if profile_resp.status_code == 404:
-            return jsonify({'error': f'User "{username}" not found on chess.com.'}), 404
-        if profile_resp.status_code != 200:
-            return jsonify({'error': f'Chess.com API error (profile): {profile_resp.status_code}'}), 502
-    except Exception as e:
-        return jsonify({'error': f'Failed to contact chess.com API (profile): {str(e)}'}), 500
-    # Step 1: Get archives
-    archives_url = f'https://api.chess.com/pub/player/{username}/games/archives'
-    try:
-        archives_resp = requests.get(archives_url, timeout=10)
-        if archives_resp.status_code != 200:
-            return jsonify({'error': f'Chess.com API error (archives): {archives_resp.status_code}'}), 502
-        archives = archives_resp.json().get('archives', [])
-    except Exception as e:
-        return jsonify({'error': f'Failed to contact chess.com API (archives): {str(e)}'}), 500
-    # Step 2: Filter archives by date if provided
-    if filter_date:
-        archives = [a for a in archives if filter_date in a]
-    # Step 3: Fetch games from each archive
-    games = []
-    for archive_url in archives[-3:]:  # Limit to last 3 months for demo/performance
-        try:
-            games_resp = requests.get(archive_url, timeout=10)
-            if games_resp.status_code != 200:
-                continue
-            for g in games_resp.json().get('games', []):
-                # Optional: filter by type
-                if filter_type and g.get('time_class') != filter_type:
-                    continue
-                # Optional: filter by opponent
-                white = g.get('white', {}).get('username', '').lower()
-                black = g.get('black', {}).get('username', '').lower()
-                if filter_opponent and filter_opponent not in (white, black):
-                    continue
-                # Format result
-                result = g.get('white', {}).get('result', '') + ' - ' + g.get('black', {}).get('result', '')
-                # Format date
-                from datetime import datetime
-                ts = g.get('end_time') or g.get('start_time')
-                date_str = datetime.utcfromtimestamp(ts).strftime('%Y-%m-%d') if ts else ''
-                # Optional: filter by single day
-                if filter_day and date_str != filter_day:
-                    continue
-                games.append({
-                    'white': g.get('white', {}).get('username', ''),
-                    'black': g.get('black', {}).get('username', ''),
-                    'result': result,
-                    'date': date_str,
-                    'pgn': g.get('pgn', '')
-                })
-        except Exception as e:
-            continue
-    return jsonify({'games': games})
+# Remove /upload_chesscom and /api/chesscom_games routes and their functions
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)

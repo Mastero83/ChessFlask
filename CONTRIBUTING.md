@@ -1,4 +1,4 @@
-# Contributing to ChessFlask
+# Contributing to ChessClub AI Assistant
 
 Thank you for your interest in contributing!
 
@@ -18,8 +18,10 @@ Open an issue or discussion and we'll be happy to help!
 ## Guidelines
 - Ensure compatibility with Stockfish engine integration
 - Follow the new UI structure (top icon bar, accordion settings, debug panel, modern home screen)
+- Use the new `base.html` for all pages with a sidebar menu; update `sidebar_menu.html` for menu changes
 - Test changes with real-time Stockfish output, cheat panel, and accuracy/analysis features
 - Document new features in README and release notes
+- Keep MongoDB indexes up to date for any new fields used in queries (see `scripts/create_library_indexes.py`)
 
 ## Areas for Contribution
 - Engine/analysis improvements (accuracy, move classification)

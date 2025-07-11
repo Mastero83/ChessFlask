@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% block head %}
+    <meta charset="UTF-8">
+    <title>{% block title %}ChessClub AI Assistant{% endblock %}</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    {% endblock %}
+</head>
+<body>
+    <button id="menuBtn" class="btn btn-default" style="position:fixed;left:8px;top:8px;font-size:1.5em;background:none;border:none;color:#fff;box-shadow:none;padding:6px 10px;border-radius:50%;z-index:3002;transition:background 0.2s;" title="Menu">
+        <span class="glyphicon glyphicon-menu-hamburger"></span>
+    </button>
+    <div id="sidebarMenu" style="position:fixed;top:0;left:0;width:240px;height:100vh;background:#232a34;box-shadow:2px 0 12px #0002;z-index:2000;transform:translateX(-100%);transition:transform 0.25s;display:flex;flex-direction:column;padding-top:40px;">
+        {% include 'sidebar_menu.html' with context %}
+    </div>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script>
+    $(function(){
+        var sidebarOpen = false;
+        function toggleSidebar() {
+            sidebarOpen = !sidebarOpen;
+            $('#sidebarMenu').css('transform', sidebarOpen ? 'translateX(0)' : 'translateX(-100%)');
+        }
+        $('#menuBtn').on('click', function(){
+            toggleSidebar();
+        });
+        // Optional: close sidebar when clicking outside
+        $(document).on('mousedown',function(e){
+            if(sidebarOpen && !$(e.target).closest('#sidebarMenu,#menuBtn').length){
+                toggleSidebar();
+            }
+        });
+        // Play menu expand/collapse
+        $('#playMenuToggle').on('click', function(e){
+            e.preventDefault();
+            var submenu = $('#playSubMenu');
+            var arrow = $('#playMenuArrow');
+            submenu.slideToggle(120);
+            arrow.html(submenu.is(':visible') ? '&#9660;' : '&#9654;');
+        });
+    });
+    </script>
+    {% block content %}{% endblock %}
+</body>
+</html> 

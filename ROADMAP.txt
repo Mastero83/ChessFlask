@@ -1,4 +1,4 @@
-ChessFlask Roadmap & Feature Checklist
+ChessClub AI Assistant Roadmap & Feature Checklist
 =====================================
 
 # Release vNext: Major UI/UX, Analytics, and Engine Improvements
@@ -17,8 +17,12 @@ ChessFlask Roadmap & Feature Checklist
 [ ] Add profile pictures for players (upload or external)
 [ ] Create a dedicated analysis page for in-depth game review
 [x] Implement a robust, visually appealing evaluation bar
+[x] Add move evaluation (CPL) for each move in the move info table
+[x] Add a play button to move navigation for auto-playback
+[x] Improve move information panel/table and navigation controls
 [ ] Add a "film/record the game" page (replay, step-through, export)
 [ ] Add an "annotate the game" page (comments, symbols, highlights)
+[x] Table filtering: ensure library table only shows filtered games
 [ ] Add a "manage the library" page (edit, delete, organize games)
 [ ] Improve session management (track more, expire, audit)
 [ ] Only allow signed-in users to access main features
@@ -32,6 +36,7 @@ ChessFlask Roadmap & Feature Checklist
     - Summarizes session data from MongoDB
     - Shows meaningful KPI visualizations: user logins, time spent, page visits, and other important statistics
     - Uses nice, modern visuals for all KPIs
+[x] Refactor menu architecture: Use a single menu definition (template) included on all pages, so menu changes propagate everywhere automatically.
 
 ---
 
