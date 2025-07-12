@@ -353,8 +353,10 @@
         <nav class="navbar navbar-default navbar-fixed-top" style="background: #232a34; border: none; box-shadow: 0 2px 12px #0008;">
           <div class="container-fluid" style="position:relative; display: flex; align-items: center; justify-content: space-between; min-height: 64px;">
               <div style="display: flex; align-items: center; gap: 12px;">
+                <a href="/startup" style="display: flex; align-items: center; gap: 12px; text-decoration: none;">
                   <img src="{{ url_for('static', filename='logo/chess club icon.png') }}" alt="Chess Club Icon" style="height:40px;width:auto;filter:drop-shadow(0 2px 8px #0008); margin-left:52px;">
                   <img src="{{ url_for('static', filename='logo/chess club text.png') }}" alt="Chess Club Text" style="height:36px;width:auto;filter:drop-shadow(0 2px 8px #0008);">
+                </a>
               </div>
               <div style="margin-left:auto; display: flex; align-items: center; gap: 16px;">
                   <div id="topbarUserCard" style="display: flex; align-items: center; gap: 10px; background: linear-gradient(90deg,#e3e9f7 60%,#b6c6e6 100%); border-radius: 10px; box-shadow: 0 2px 8px #1976d233; padding: 7px 14px 7px 8px;">
@@ -400,6 +402,11 @@
                 arrow.html(submenu.is(':visible') ? '&#9660;' : '&#9654;');
             });
         });
+        </script>
+        <script>
+        window.initialMoveAnnotations = {{ move_annotations|default({})|tojson }};
+        window.loadedGameJson = {{ game_json|default({})|tojson }};
+        window.currentGameId = {{ game_id|tojson }};
         </script>
         <div class="play-container">
             <div class="play-card" style="display: flex; flex-direction: row; align-items: flex-start; justify-content: center; gap: 24px; max-width: 1100px;">
@@ -474,8 +481,10 @@
                                         <span id="moveNavTotal" style="font-size: 1.1em; color: #888;">/ 0</span>
                                         <button id="moveNavForward" class="move-nav-btn" title="Next Move"><span class="glyphicon glyphicon-chevron-right"></span></button>
                                         <button id="moveNavLast" class="move-nav-btn" title="Last Move"><span class="glyphicon glyphicon-step-forward"></span></button>
-                                        <button id="playMovesBtn" class="move-nav-btn" title="Play through game"><span class="glyphicon glyphicon-play"></span></button>
                                         <button id="downloadPgnBtn" class="move-nav-btn" title="Import/Export PGN"><span class="glyphicon glyphicon-transfer"></span></button>
+                                        <button id="annotationsBtn" class="move-nav-btn" title="Annotations" style="background: linear-gradient(90deg, #8e24aa 60%, #ce93d8 100%); color: #fff;">
+                                            <span class="glyphicon glyphicon-comment"></span>
+                                        </button>
                                     </div>
                                     <div id="moveTable">
                                         <table class="move-eval-table" id="pgn" style="min-width: 100%;">
@@ -494,6 +503,21 @@
                                       <span class="cpl-white">White CPL</span>
                                       <span class="cpl-black">Black CPL</span>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel panel-info">
+                            <div class="panel-heading" role="tab" id="annotationsPanelHeading">
+                                <h4 class="panel-title" style="text-align: center; width: 100%;">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#metaPanelAccordion" href="#annotationsPanel" aria-expanded="false" aria-controls="annotationsPanel">
+                                        <span class="glyphicon glyphicon-comment" style="margin-right:8px;"></span><b>Annotations</b>
+                                    </a>
+                                </h4>
+                            </div>
+                            <div id="annotationsPanel" class="panel-collapse collapse" role="tabpanel" aria-labelledby="annotationsPanelHeading">
+                                <div class="panel-body" id="annotationsPanelBody">
+                                    <!-- Annotations will be injected here by JS -->
+                                    <div id="gameJsonDebugWrapper" style="margin-top:18px;"></div>
                                 </div>
                             </div>
                         </div>
@@ -577,6 +601,20 @@
                     <div style="display: flex; gap: 10px;">
                         <button id="downloadPgnPanelBtn" class="btn btn-primary"><span class="glyphicon glyphicon-download"></span> Download PGN</button>
                         <button id="importPgnPanelBtn" class="btn btn-success"><span class="glyphicon glyphicon-import"></span> Import PGN</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="annotationsPanelWrapper" style="display:none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.25); z-index: 2000; align-items: center; justify-content: center;">
+            <div id="annotationsPanel" class="panel panel-default" style="max-width: 600px; width: 90vw; margin: auto; box-shadow: 0 4px 24px #0003; border-radius: 12px;">
+                <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center;">
+                    <b>Move Annotations</b>
+                    <button id="closeAnnotationsPanelBtn" style="background: none; border: none; font-size: 1.5em; color: #888; cursor: pointer;" title="Close">&times;</button>
+                </div>
+                <div class="panel-body" style="background: #f8f9fa; border-radius: 0 0 12px 12px;">
+                    <textarea id="annotationsText" style="width: 100%; min-height: 180px; background: #fff; padding: 16px; border-radius: 8px; font-size: 1em; max-height: 300px; overflow-y: auto; margin-bottom: 16px; resize: vertical;"></textarea>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="saveAnnotationsBtn" class="btn btn-primary"><span class="glyphicon glyphicon-floppy-disk"></span> Save</button>
                     </div>
                 </div>
             </div>

@@ -1229,7 +1229,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     // Download PGN from panel
     $('#downloadPgnPanelBtn').on('click', function() {
-        var pgn = $('#pgnText').text();
+        var pgn = exportAnnotationsToPGN(game.pgn());
+        $('#pgnText').val(pgn);
         var blob = new Blob([pgn], { type: 'text/plain' });
         var url = URL.createObjectURL(blob);
         var a = document.createElement('a');
@@ -1350,6 +1351,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 game = newGame;
                 safeBoardPosition(game.fen());
                 updateStatus();
+                // Update player info cards
+                var headers = parsePgnHeaders(imported);
+                updatePlayerInfoCardsFromHeaders(headers);
             }
             localStorage.removeItem('importedPGN');
         }
@@ -1521,3 +1525,286 @@ style.innerHTML = `
   100% { box-shadow: 0 0 12px 6px #43a04733; }
 }`;
 document.head.appendChild(style);
+
+// === Player Info Card Update ===
+function updatePlayerInfoCardsFromHeaders(headers) {
+    // Update White player (user)
+    var whiteName = headers['White'] || 'White';
+    var whiteDivs = document.querySelectorAll('#userInfoCard div');
+    if (whiteDivs.length >= 2) {
+        whiteDivs[0].querySelector('img').src =
+            'https://ui-avatars.com/api/?name=' + encodeURIComponent(whiteName) + '&background=1976d2&color=fff&size=48';
+        whiteDivs[1].children[0].textContent = whiteName;
+    }
+    // Update Black player (opponent)
+    var blackName = headers['Black'] || 'Black';
+    var oppNameDiv = document.getElementById('opponentName');
+    if (oppNameDiv) oppNameDiv.textContent = blackName;
+    // Optionally update avatar for black (if not Stockfish)
+    var oppImg = document.querySelector('#opponentInfoCard img');
+    if (oppImg && blackName !== 'Stockfish' && blackName !== 'AI' && blackName !== 'Engine') {
+        oppImg.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(blackName) + '&background=444444&color=fff&size=38';
+    } else if (oppImg) {
+        oppImg.src = 'https://img.icons8.com/ios-filled/50/ffb300/robot-2.png';
+    }
+}
+
+// === Move Annotations Logic ===
+var moveAnnotations = {};
+
+function getCurrentMoveIndex() {
+    // Returns the current move index (0-based ply)
+    var idx = navIndex === null ? game.history().length : navIndex;
+    return idx;
+}
+
+function loadAnnotationsFromPGN(pgn) {
+    // Parse PGN comments for each move
+    moveAnnotations = {};
+    var lines = pgn.split('\n');
+    var moves = [];
+    var comments = [];
+    var moveIdx = 0;
+    var inComment = false;
+    var commentBuffer = '';
+    var tokens = pgn.replace(/\r?\n/g, ' ').split(/\s+/);
+    tokens.forEach(function(token) {
+        if (token.startsWith('{')) {
+            inComment = true;
+            commentBuffer = token.slice(1);
+            if (token.endsWith('}')) {
+                inComment = false;
+                commentBuffer = commentBuffer.slice(0, -1);
+                comments.push({ idx: moveIdx, text: commentBuffer.trim() });
+                commentBuffer = '';
+            }
+        } else if (inComment) {
+            if (token.endsWith('}')) {
+                commentBuffer += ' ' + token.slice(0, -1);
+                inComment = false;
+                comments.push({ idx: moveIdx, text: commentBuffer.trim() });
+                commentBuffer = '';
+            } else {
+                commentBuffer += ' ' + token;
+            }
+        } else if (/^([a-h][1-8]|O-O|O-O-O|[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](=[QRBN])?|[a-h][1-8]=[QRBN])([+#])?$/.test(token)) {
+            // Looks like a move
+            moveIdx++;
+        }
+    });
+    comments.forEach(function(c) {
+        moveAnnotations[c.idx] = c.text;
+    });
+}
+
+function exportAnnotationsToPGN(pgn) {
+    // Insert comments into PGN for each move
+    var tokens = pgn.split(/(\s+)/);
+    var moveIdx = 0;
+    var result = '';
+    tokens.forEach(function(token) {
+        result += token;
+        if (/^([a-h][1-8]|O-O|O-O-O|[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](=[QRBN])?|[a-h][1-8]=[QRBN])([+#])?$/.test(token)) {
+            moveIdx++;
+            if (moveAnnotations[moveIdx]) {
+                result += ' {' + moveAnnotations[moveIdx].replace(/}/g, '') + '}';
+            }
+        }
+    });
+    return result;
+}
+
+// Open/close modal logic
+$(document).on('click', '#annotationsBtn', function() {
+    var idx = getCurrentMoveIndex();
+    $('#annotationsText').val(moveAnnotations[idx] || '');
+    $('#annotationsPanelWrapper').css('display', 'flex');
+});
+$(document).on('click', '#closeAnnotationsPanelBtn', function() {
+    $('#annotationsPanelWrapper').hide();
+});
+$(document).on('click', '#saveAnnotationsBtn', function() {
+    var idx = getCurrentMoveIndex();
+    var text = $('#annotationsText').val();
+    if (text.trim()) {
+        moveAnnotations[idx] = text.trim();
+    } else {
+        delete moveAnnotations[idx];
+    }
+    $('#annotationsPanelWrapper').hide();
+});
+
+// Integrate with PGN import/export
+function renderAnnotationsPanel() {
+    var $panel = $('#annotationsPanelBody');
+    $panel.empty();
+    var hasAny = false;
+    // If initialMoveAnnotations is present, show all keys
+    var annotationsSource = (window.initialMoveAnnotations && Object.keys(window.initialMoveAnnotations).length > 0) ? window.initialMoveAnnotations : moveAnnotations;
+    var keys = Object.keys(annotationsSource).map(function(k) { return parseInt(k, 10); }).sort(function(a, b) { return a - b; });
+    for (var i = 0; i < keys.length; i++) {
+        var idx = keys[i];
+        var ann = annotationsSource[idx];
+        if (ann && ann.trim()) {
+            hasAny = true;
+            var moveNum = Math.floor((idx-1)/2) + 1;
+            var color = ((idx-1) % 2 === 0) ? 'White' : 'Black';
+            $panel.append('<div style="margin-bottom:10px;"><b>Move ' + moveNum + ' (' + color + '):</b><br><span style="color:#8e24aa;">' + ann.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') + '</span></div>');
+        }
+    }
+    if (!hasAny) {
+        $panel.append('<div style="color:#888;">No annotations for this game.</div>');
+    }
+    // Debug JSON area
+    var $debug = $('<div style="margin-top:18px;"></div>');
+    var jsonStr = '';
+    if (window.loadedGameJson && Object.keys(window.loadedGameJson).length > 0) {
+        jsonStr = JSON.stringify(window.loadedGameJson, null, 2);
+    } else {
+        jsonStr = 'No loaded game JSON.';
+    }
+    $debug.append('<label style="font-weight:600;color:#1976d2;">Debug: Full Game JSON</label>');
+    $debug.append('<textarea readonly style="width:100%;min-height:120px;font-size:0.98em;background:#f5f7fa;border-radius:8px;border:1px solid #bbb;padding:8px;resize:vertical;">' + jsonStr + '</textarea>');
+    $('#gameJsonDebugWrapper').remove();
+    $panel.append($debug.attr('id','gameJsonDebugWrapper'));
+    // Add DB annotations fetch button and box
+    if ($('#gameJsonDebugWrapper').length) {
+        if (!$('#refreshDbAnnotationsBtn').length) {
+            $('#gameJsonDebugWrapper').append(
+                '<button id="refreshDbAnnotationsBtn" style="margin-top:10px;">Refresh Annotations from DB</button>' +
+                '<textarea id="moveAnnotationsFromDbBox" readonly style="width:100%;min-height:60px;margin-top:6px;background:#f5f7fa;border-radius:8px;border:1px solid #bbb;padding:8px;"></textarea>'
+            );
+            $('#refreshDbAnnotationsBtn').on('click', function() {
+                var gameId = window.currentGameId;
+                if (!gameId) {
+                    $('#moveAnnotationsFromDbBox').val('No game ID available.');
+                    return;
+                }
+                $.getJSON('/api/game_json/' + encodeURIComponent(gameId), function(data) {
+                    if (data && data.game && Array.isArray(data.game.move_annotations)) {
+                        var anns = data.game.move_annotations.map((ann, idx) =>
+                            ann ? `Move ${idx+1}: ${ann}` : null
+                        ).filter(Boolean).join('\n');
+                        $('#moveAnnotationsFromDbBox').val(anns || 'No move annotations in DB.');
+                    } else {
+                        $('#moveAnnotationsFromDbBox').val('No move annotations found.');
+                    }
+                });
+            });
+        }
+    }
+}
+// Update annotations panel when game or annotations change
+var oldUpdateStatusAnnotations = updateStatus;
+updateStatus = function() {
+    oldUpdateStatusAnnotations();
+    renderAnnotationsPanel();
+};
+// Also update on PGN import
+$('#importPgnPanelBtn').on('click', function() {
+    setTimeout(renderAnnotationsPanel, 150);
+});
+// On page load, load annotations from PGN
+$(function() {
+    function getGameIdFromUrl() {
+        var match = window.location.pathname.match(/play_game\/(.+)$/);
+        return match ? match[1] : null;
+    }
+    function fetchGameJson(gameId, cb) {
+        $.getJSON('/api/game_json/' + encodeURIComponent(gameId), function(data) {
+            if (data && data.game) {
+                window.loadedGameJson = data.game;
+                cb(data.game);
+            } else {
+                cb(null);
+            }
+        }).fail(function() { cb(null); });
+    }
+    if (window.loadedGameJson && Object.keys(window.loadedGameJson).length > 0) {
+        // ... existing code for loading JSON ...
+        var g = window.loadedGameJson;
+        var newGame = new Chess();
+        if (g.headers) {
+            Object.keys(g.headers).forEach(function(key) {
+                newGame.header(key, g.headers[key]);
+            });
+        }
+        if (g.moves && Array.isArray(g.moves)) {
+            g.moves.forEach(function(move) {
+                if (move) newGame.move(move, { sloppy: true });
+            });
+        }
+        game = newGame;
+        safeBoardPosition(game.fen());
+        moveAnnotations = {};
+        if (g.move_annotations && Array.isArray(g.move_annotations)) {
+            g.move_annotations.forEach(function(ann, idx) {
+                if (ann && ann.trim()) moveAnnotations[idx+1] = ann;
+            });
+        }
+        renderAnnotationsPanel();
+        updateStatus();
+    } else if (window.initialMoveAnnotations && Object.keys(window.initialMoveAnnotations).length > 0) {
+        moveAnnotations = window.initialMoveAnnotations;
+        renderAnnotationsPanel();
+    } else {
+        // Try to fetch game JSON for annotation box if game_id is in URL
+        var gameId = getGameIdFromUrl();
+        if (gameId) {
+            fetchGameJson(gameId, function(gameJson) {
+                if (gameJson) {
+                    window.loadedGameJson = gameJson;
+                    renderAnnotationsPanel();
+                } else {
+                    loadAnnotationsFromPGN(game.pgn());
+                    renderAnnotationsPanel();
+                }
+            });
+        } else {
+            loadAnnotationsFromPGN(game.pgn());
+            renderAnnotationsPanel();
+        }
+    }
+});
+
+// Add annotation popup for per-move annotation
+if (!document.getElementById('moveAnnotationPopup')) {
+    var popupHtml = '<div id="moveAnnotationPopup" class="annotation-popup" style="display:none;">'
+        + '<button class="close-btn" onclick="$(\'#moveAnnotationPopup\').hide();">&times;</button>'
+        + '<div style="font-weight:700;font-size:1.2em;color:#8e24aa;margin-bottom:10px;">Move Annotation</div>'
+        + '<textarea id="moveAnnotationText"></textarea>'
+        + '<div style="text-align:right;">'
+        + '<button class="save-btn" id="saveMoveAnnotationBtn">Save</button>'
+        + '<button class="btn btn-default" onclick="$(\'#moveAnnotationPopup\').hide();">Cancel</button>'
+        + '</div></div>';
+    $(document.body).append(popupHtml);
+}
+$(document).off('click', '.annotation-icon').on('click', '.annotation-icon', function() {
+    var ply = $(this).data('ply');
+    var ann = moveAnnotations[ply] || '';
+    $('#moveAnnotationText').val(ann);
+    $('#moveAnnotationPopup').show();
+    $('#saveMoveAnnotationBtn').data('ply', ply);
+});
+$('#saveMoveAnnotationBtn').off('click').on('click', function() {
+    var ply = $(this).data('ply');
+    var text = $('#moveAnnotationText').val();
+    if (text.trim()) {
+        moveAnnotations[ply] = text.trim();
+    } else {
+        delete moveAnnotations[ply];
+    }
+    $('#moveAnnotationPopup').hide();
+});
+
+// Keyboard navigation for moves
+$(document).on('keydown', function(e) {
+    if ($(e.target).is('input, textarea')) return; // Don't interfere with typing
+    if (e.key === 'ArrowLeft') {
+        $('#moveNavBack').click();
+        e.preventDefault();
+    } else if (e.key === 'ArrowRight') {
+        $('#moveNavForward').click();
+        e.preventDefault();
+    }
+});

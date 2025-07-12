@@ -82,11 +82,11 @@ def login():
 
 # Remove Flask-Menu imports and usage
 
+# Update MENU_ITEMS for new sidebar structure
 MENU_ITEMS = [
     {'name': 'Home', 'url': '/startup'},
     {'name': 'Play', 'url': '/play'},
-    {'name': 'Library', 'url': '/library'},
-    {'name': 'Upload', 'url': '/upload'},
+    {'name': 'Library', 'url': None},  # Parent for tree menu
     {'name': 'Openings', 'url': '/openings'},
     {'name': 'Analysis (Placeholder)', 'url': '/analysis'},
     {'name': 'Annotate (Placeholder)', 'url': '/annotate'},
@@ -106,7 +106,7 @@ def startup():
 @app.route('/play')
 def play():
     color = request.args.get('color', 'white')
-    return render_template("index.html", color=color, menu_items=MENU_ITEMS)
+    return render_template("index.html", color=color, menu_items=MENU_ITEMS, game_id=None)
 
 @app.route('/openings', methods=['GET', 'POST'])
 def openings():
@@ -355,15 +355,22 @@ def process_pgn():
                 total_games += 1
                 node = game
                 moves = []
+                move_annotations = []
+                # Traverse the mainline and collect moves and comments
                 while node.variations:
-                    node = node.variations[0]
-                    moves.append(node.uci())
+                    next_node = node.variations[0]
+                    moves.append(next_node.uci())
+                    # Store comment for this move (if any)
+                    comment = next_node.comment if hasattr(next_node, 'comment') else ''
+                    move_annotations.append(comment)
+                    node = next_node
                 if not moves:
                     invalid_first_move += 1
                     continue
                 game_dict = {
                     'headers': dict(game.headers),
-                    'moves': moves
+                    'moves': moves,
+                    'move_annotations': move_annotations
                 }
                 valid_games.append(game_dict)
                 # Update progress every 10 games
@@ -419,6 +426,8 @@ def save_to_library():
             'headers': g.get('headers', {}),
             'moves': g.get('moves', [])
         }
+        if 'move_annotations' in g:
+            doc['move_annotations'] = g['move_annotations']
         docs.append(doc)
     result = library_collection.insert_many(docs)
     debug['inserted_ids'] = [str(_id) for _id in result.inserted_ids]
@@ -481,100 +490,93 @@ def club():
 def ideas():
     return render_template('placeholder.html', title='Submit Improvement Ideas', menu_items=MENU_ITEMS)
 
-@app.route('/user-usage')
-def user_usage():
-    if 'username' not in session:
-        return redirect(url_for('login'))
-    return render_template('user_usage.html')
+@app.route('/library_management')
+def library_management():
+    # Aggregate unique openings and their game counts
+    pipeline = [
+        {"$group": {"_id": "$opening", "count": {"$sum": 1}}},
+        {"$sort": {"_id": 1}}
+    ]
+    results = list(library_collection.aggregate(pipeline))
+    openings = [
+        {"name": r["_id"], "count": r["count"]}
+        for r in results if r["_id"]
+    ]
+    return render_template('library_management.html', openings=openings, menu_items=MENU_ITEMS)
 
-# Register menu items after routes
-# Remove Flask-Menu imports and usage
+@app.route('/delete_opening', methods=['POST'])
+def delete_opening():
+    data = request.get_json()
+    opening = data.get('opening')
+    if not opening:
+        return jsonify({'error': 'No opening specified'}), 400
+    result = library_collection.delete_many({'opening': opening})
+    return jsonify({'status': 'ok', 'deleted_count': result.deleted_count})
+
+@app.route('/download_pgn/<opening>')
+def download_pgn(opening):
+    import chess.pgn
+    import io
+    # Find all games for this opening
+    games = list(library_collection.find({'opening': opening}))
+    pgn_io = io.StringIO()
+    for game in games:
+        headers = game.get('headers', {})
+        moves = game.get('moves', [])
+        annotations = game.get('move_annotations', [])
+        # Build PGN game
+        board = chess.Board()
+        pgn_game = chess.pgn.Game()
+        for k, v in headers.items():
+            if v:
+                pgn_game.headers[k] = v
+        node = pgn_game
+        for idx, move_uci in enumerate(moves):
+            move = board.parse_uci(move_uci)
+            node = node.add_variation(move)
+            # Add annotation as comment if present
+            if idx < len(annotations) and annotations[idx]:
+                node.comment = annotations[idx]
+            board.push(move)
+        exporter = chess.pgn.FileExporter(pgn_io)
+        pgn_game.accept(exporter)
+        pgn_io.write('\n')
+    pgn_str = pgn_io.getvalue()
+    return (pgn_str, 200, {
+        'Content-Type': 'application/x-chess-pgn',
+        'Content-Disposition': f'attachment; filename="{opening}.pgn"'
+    })
+
+# Remove /user-usage and /api/user-usage routes and references
 
 @app.route('/logoff')
 def logoff():
     end_session()
     return redirect(url_for('login'))
 
-@app.route('/api/user-usage')
-def api_user_usage():
-    # Map technical paths to friendly names
-    PAGE_NAME_MAP = {
-        '/': 'Login',
-        '/startup': 'Home',
-        '/play': 'Play',
-        '/library': 'Library',
-        '/upload': 'Upload',
-        '/openings': 'Openings',
-        '/annotate': 'Annotate',
-        '/analysis': 'Analysis',
-        '/record': 'Record/Film',
-        '/club': 'Chess Club',
-        '/ideas': 'Submit Ideas',
-        '/user-usage': 'User Usage',
-    }
-    def friendly_page_name(page):
-        # Group by prefix for subpages (e.g., /play/123 -> Play)
-        for path, name in PAGE_NAME_MAP.items():
-            if page == path or page.startswith(path + '/'):
-                return name
-        return page  # fallback to raw path
+@app.route('/play_game/<game_id>')
+def play_game(game_id):
+    game = library_collection.find_one({'_id': uuid.UUID(game_id) if '-' in game_id else game_id})
+    color = request.args.get('color', 'white')
+    move_annotations = {}
+    game_json = None
+    if game:
+        # Remove _id for frontend safety
+        game_json = dict(game)
+        game_json.pop('_id', None)
+        if 'move_annotations' in game:
+            # Convert list to {ply: annotation} format (1-based)
+            move_annotations = {str(i+1): ann for i, ann in enumerate(game['move_annotations']) if ann}
+    return render_template("index.html", color=color, menu_items=MENU_ITEMS, move_annotations=move_annotations, game_json=game_json, game_id=game_id)
 
-    pipeline = [
-        {"$match": {"username": {"$exists": True}}},
-        {"$group": {
-            "_id": "$username",
-            "total_sessions": {"$sum": 1},
-            "total_time": {"$sum": {"$ifNull": ["$duration", 0]}},
-            "sessions": {"$push": "$session_id"},
-        }}
-    ]
-    user_stats = list(sessions_collection.aggregate(pipeline))
-    total_logins = sum(u["total_sessions"] for u in user_stats)
-    total_time = sum(u["total_time"] for u in user_stats)
-    unique_users = len(user_stats)
-
-    # Logins over time (by day)
-    logins_over_time = list(sessions_collection.aggregate([
-        {"$match": {"start_time": {"$exists": True}}},
-        {"$project": {"date": {"$toDate": {"$multiply": [1000, {"$toLong": "$start_time"}]}}}},
-        {"$group": {
-            "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$date"}},
-            "count": {"$sum": 1}
-        }},
-        {"$sort": {"_id": 1}}
-    ]))
-
-    # Time spent by page (grouped by friendly name)
-    time_by_page = {}
-    page_visits = {}
-    for sess in sessions_collection.find({"pages_visited": {"$exists": True}}):
-        pages = sess.get("pages_visited", [])
-        for i, page in enumerate(pages):
-            p = page.get("page")
-            friendly = friendly_page_name(p)
-            t0 = page.get("timestamp")
-            t1 = pages[i+1]["timestamp"] if i+1 < len(pages) else sess.get("end_time", t0)
-            dt = max(0, t1-t0) if t1 and t0 else 0
-            time_by_page[friendly] = time_by_page.get(friendly, 0) + dt
-            page_visits[friendly] = page_visits.get(friendly, 0) + 1
-    # Format for charts
-    time_by_page_list = [{"page": k, "seconds": v} for k, v in time_by_page.items()]
-    page_visits_list = [{"page": k, "count": v} for k, v in page_visits.items()]
-    # Format logins over time
-    logins_over_time_list = [{"date": x["_id"], "count": x["count"]} for x in logins_over_time]
-    return jsonify({
-        "total_logins": total_logins,
-        "total_time": total_time,
-        "unique_users": unique_users,
-        "logins_over_time": logins_over_time_list,
-        "time_by_page": time_by_page_list,
-        "page_visits": page_visits_list
-    })
-
-import requests
-from flask import jsonify
-
-# Remove /upload_chesscom and /api/chesscom_games routes and their functions
+@app.route('/api/game_json/<game_id>')
+def api_game_json(game_id):
+    game = library_collection.find_one({'_id': uuid.UUID(game_id) if '-' in game_id else game_id})
+    if not game:
+        return jsonify({'error': 'Game not found'}), 404
+    game_json = dict(game)
+    game_json.pop('_id', None)
+    return jsonify({'game': game_json})
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
