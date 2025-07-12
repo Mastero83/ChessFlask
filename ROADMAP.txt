@@ -31,12 +31,6 @@ ChessClub AI Assistant Roadmap & Feature Checklist
 [ ] Create a chess club module (start with a digital twin of UVS, add all players, integrate AI, and upload their pictures)
 [ ] Add a page where users can submit improvement ideas
 [x] Improve menu structure and consistency in UI
-[x] Add a "User usage" page (menu item at bottom):
-    - Accessible only via the menu as a new item at the bottom
-    - Summarizes session data from MongoDB
-    - Shows meaningful KPI visualizations: user logins, time spent, page visits, and other important statistics
-    - Uses nice, modern visuals for all KPIs
-[x] Refactor menu architecture: Use a single menu definition (template) included on all pages, so menu changes propagate everywhere automatically.
 
 ---
 

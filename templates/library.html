@@ -174,6 +174,94 @@
             box-shadow: 0 0 0 3px #ff9800cc !important;
             z-index: 2;
         }
+        .opening-box {
+            background: linear-gradient(90deg, #e3e9f7 60%, #b6c6e6 100%);
+            border-radius: 14px;
+            box-shadow: 0 2px 8px #1976d233;
+            padding: 18px 28px;
+            width: 220px;
+            height: 90px;
+            margin: 0;
+            font-size: 1.13em;
+            font-weight: 600;
+            color: #1976d2;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: background 0.18s, border 0.18s, color 0.18s, box-shadow 0.18s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-sizing: border-box;
+            text-align: center;
+            overflow: hidden;
+        }
+        .opening-box.selected, .opening-box:hover {
+            background: linear-gradient(90deg, #1976d2 60%, #64b5f6 100%);
+            color: #fff;
+            border: 2px solid #ffe082;
+            box-shadow: 0 4px 16px #1976d233;
+        }
+        .opening-box .game-count {
+            font-size: 0.98em;
+            color: #888;
+            margin-top: 6px;
+            background: #fff;
+            border-radius: 8px;
+            padding: 2px 10px;
+            font-weight: 500;
+            box-shadow: 0 1px 4px #1976d211;
+        }
+        .annotation-icon {
+            color: #8e24aa;
+            cursor: pointer;
+            margin-left: 6px;
+            font-size: 1.2em;
+        }
+        .annotation-popup {
+            display: none;
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px #0005;
+            padding: 28px 32px 24px 32px;
+            z-index: 5000;
+            min-width: 320px;
+            max-width: 90vw;
+        }
+        .annotation-popup textarea {
+            width: 100%;
+            min-height: 80px;
+            border-radius: 8px;
+            border: 1px solid #bbb;
+            padding: 8px;
+            font-size: 1.1em;
+            margin-bottom: 16px;
+        }
+        .annotation-popup .close-btn {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            color: #888;
+            cursor: pointer;
+        }
+        .annotation-popup .save-btn {
+            background: linear-gradient(90deg,#8e24aa 60%,#ce93d8 100%);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 18px;
+            font-weight: 600;
+            font-size: 1.1em;
+            margin-right: 10px;
+        }
     </style>
     <link rel="stylesheet" href="{{ url_for('static', filename='libs/chessboard/css/chessboard-0.3.0.css') }}">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
@@ -231,8 +319,7 @@
         <div class="library-card">
             <div class="library-title">Chess Game Library</div>
             <div id="openingSelectSection" style="margin-bottom:32px;">
-                <label for="openingSelect" style="font-size:1.15em;font-weight:600;margin-right:10px;">Select Opening:</label>
-                <select id="openingSelect" class="form-control" style="display:inline-block;width:auto;min-width:220px;"></select>
+                <div id="openingsGrid" style="display: flex; flex-wrap: wrap; gap: 18px; justify-content: center;"></div>
             </div>
             <div id="mainLibraryContent" style="display:none;">
                 <div class="library-board-row">
@@ -274,21 +361,38 @@
             </div>
         </div>
     </div>
+    <div id="annotationPopup" class="annotation-popup">
+        <button class="close-btn" onclick="$('#annotationPopup').hide();">&times;</button>
+        <div style="font-weight:700;font-size:1.2em;color:#8e24aa;margin-bottom:10px;">Move Annotation</div>
+        <textarea id="annotationText"></textarea>
+        <div style="text-align:right;">
+            <button class="save-btn" id="saveAnnotationBtn">Save</button>
+            <button class="btn btn-default" onclick="$('#annotationPopup').hide();">Cancel</button>
+        </div>
+    </div>
     <script>
     var allGames = [];
     var allGamesRaw = [];
-    function fetchOpeningsAndInit() {
-        $.getJSON('/openings_list', function(data) {
-            var select = $('#openingSelect');
-            select.empty();
-            select.append('<option value="">-- Select an Opening --</option>');
-            data.openings.forEach(function(opening) {
-                select.append('<option value="' + opening.replace(/"/g, '&quot;') + '">' + opening + '</option>');
+    function renderOpeningsGrid(openings, allGamesRaw, selectedOpening) {
+        var grid = $('#openingsGrid');
+        grid.empty();
+        openings.forEach(function(opening) {
+            var count = allGamesRaw.filter(function(g) { return g.opening === opening; }).length;
+            var box = $('<div class="opening-box"></div>');
+            box.text(opening);
+            box.append('<div class="game-count">' + count + ' game' + (count !== 1 ? 's' : '') + '</div>');
+            if (opening === selectedOpening) box.addClass('selected');
+            box.on('click', function() {
+                $(".opening-box").removeClass('selected');
+                box.addClass('selected');
+                selectOpening(opening);
             });
+            grid.append(box);
         });
     }
-    $('#openingSelect').on('change', function() {
-        var opening = $(this).val();
+    var selectedOpening = null;
+    function selectOpening(opening) {
+        selectedOpening = opening;
         if (!opening) {
             $('#mainLibraryContent').hide();
             allGames = [];
@@ -296,7 +400,6 @@
             updateBoardOverlay();
             return;
         }
-        // Filter allGamesRaw for this opening
         allGames = allGamesRaw.filter(function(g) { return g.opening === opening; });
         renderLibraryTable(allGames);
         $('#mainLibraryContent').show();
@@ -304,7 +407,12 @@
         chess.reset();
         board.position('start');
         updateBoardOverlay();
-    });
+    }
+    function fetchOpeningsAndInit() {
+        $.getJSON('/openings_list', function(data) {
+            renderOpeningsGrid(data.openings, allGamesRaw, selectedOpening);
+        });
+    }
     var board = ChessBoard('board', {
         draggable: true,
         position: 'start',
@@ -339,7 +447,8 @@
             row.append('<td>' + (game.headers.Black || '') + '</td>');
             row.append('<td>' + (game.headers.Date || '') + '</td>');
             row.append('<td>' + (game.headers.Result || '') + '</td>');
-            row.append('<td><button class="btn btn-info btn-sm load-btn" data-id="' + game.id + '" data-moves="' + game.moves.join(',') + '">Load</button></td>');
+            var annotationIcon = '<span class="glyphicon glyphicon-comment annotation-icon" title="View/Edit Annotations" data-idx="' + idx + '"></span>';
+            row.append('<td><button class="btn btn-info btn-sm load-btn" data-id="' + game.id + '" data-moves="' + game.moves.join(',') + '">Load</button>' + annotationIcon + '</td>');
             tbody.append(row);
         });
     }
@@ -478,7 +587,8 @@
             id: "{{ game.id }}",
             moves: {{ game.moves|tojson }},
             opening: {{ game.opening|tojson }},
-            headers: {{ game.headers|tojson }}
+            headers: {{ game.headers|tojson }},
+            move_annotations: {{ (game.move_annotations if game.move_annotations is defined else [])|tojson }}
         });
         {% endfor %}
         fetchOpeningsAndInit();
@@ -489,7 +599,7 @@
         var gameId = $(this).data('id');
         var game = allGames.find(function(g) { return g.id === gameId; });
         if (!game) return;
-        // Build PGN from moves and headers
+        // Build PGN from moves and headers, including annotations
         var headers = game.headers || {};
         var pgn = '';
         Object.keys(headers).forEach(function(key) {
@@ -497,8 +607,37 @@
         });
         pgn += '\n';
         var chessTmp = new Chess();
-        (game.moves || []).forEach(function(m) { if (m) chessTmp.move(m, { sloppy: true }); });
-        pgn += chessTmp.pgn();
+        var moves = game.moves || [];
+        var annotations = game.move_annotations || [];
+        var moveIdx = 0;
+        for (var i = 0; i < moves.length; i++) {
+            if (moves[i]) {
+                chessTmp.move(moves[i], { sloppy: true });
+                // Add move annotation as PGN comment if present
+                if (annotations[i] && annotations[i].trim()) {
+                    chessTmp.header('Comment', annotations[i]); // Not standard, but will be added as comment
+                }
+            }
+        }
+        // Now build PGN with comments
+        var pgnWithComments = '';
+        var history = chessTmp.history({ verbose: true });
+        var sanMoves = chessTmp.pgn().split(/\s+/);
+        var annIdx = 0;
+        for (var j = 0; j < sanMoves.length; j++) {
+            var move = sanMoves[j];
+            if (/^\d+\.$/.test(move)) {
+                pgnWithComments += move + ' ';
+            } else if (move) {
+                pgnWithComments += move;
+                if (annotations[annIdx] && annotations[annIdx].trim()) {
+                    pgnWithComments += ' {' + annotations[annIdx].replace(/}/g, '') + '}';
+                }
+                pgnWithComments += ' ';
+                annIdx++;
+            }
+        }
+        pgn = pgn.replace(/\n+$/, '') + '\n' + pgnWithComments.trim();
         localStorage.setItem('importedPGN', pgn);
         window.location.href = '/play';
     });
@@ -548,6 +687,26 @@
         board.position(chess.fen());
         filterGamesByMoves();
         updateBoardOverlay();
+    });
+    // Annotation popup logic
+    var currentAnnotationIdx = null;
+    $(document).on('click', '.annotation-icon', function() {
+        var idx = $(this).data('idx');
+        var game = allGames[idx];
+        var annotation = (game && game.move_annotations && game.move_annotations.length) ? game.move_annotations.join('\n') : '';
+        $('#annotationText').val(annotation);
+        $('#annotationPopup').show();
+        currentAnnotationIdx = idx;
+    });
+    $('#saveAnnotationBtn').on('click', function() {
+        var idx = currentAnnotationIdx;
+        if (idx == null) return;
+        var game = allGames[idx];
+        if (!game) return;
+        var newText = $('#annotationText').val().split('\n');
+        game.move_annotations = newText;
+        $('#annotationPopup').hide();
+        // Optionally: send to backend to persist
     });
     </script>
 </body>

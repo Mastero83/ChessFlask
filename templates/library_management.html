@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% block title %}Library Management | ChessClub AI Assistant{% endblock %}
+{% block head %}
+    {{ super() }}
+    <style>
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.35;
+            background:
+                url('https://images.unsplash.com/photo-1517524285303-d6fc683dddf8?auto=format&fit=crop&w=1200&q=80') center center/cover no-repeat;
+            filter: grayscale(0.1) blur(0.5px) brightness(0.98);
+            animation: shimmer 12s linear infinite alternate;
+        }
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 0;
+            pointer-events: none;
+            background: repeating-linear-gradient(45deg, #e3e9f7cc 0 16px, transparent 16px 32px);
+            opacity: 0.13;
+        }
+        @keyframes shimmer {
+            0% { filter: grayscale(0.1) blur(0.5px) brightness(0.98) hue-rotate(0deg); }
+            100% { filter: grayscale(0.1) blur(0.5px) brightness(1.05) hue-rotate(10deg); }
+        }
+        .management-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            position: relative;
+            z-index: 1;
+        }
+        .management-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px #1976d233;
+            padding: 36px 48px;
+            margin-top: 48px;
+            width: 600px;
+            max-width: 95vw;
+        }
+        .management-title {
+            font-size: 2em;
+            font-weight: 700;
+            color: #1976d2;
+            margin-bottom: 32px;
+            text-align: center;
+        }
+        .openings-table th, .openings-table td {
+            text-align: center;
+            vertical-align: middle;
+        }
+        .delete-btn {
+            color: #fff;
+            background: #d32f2f;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 16px;
+            font-weight: 600;
+            transition: background 0.18s;
+        }
+        .delete-btn:hover {
+            background: #b71c1c;
+        }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+{% endblock %}
+{% block content %}
+<div class="management-container">
+    <div class="management-card">
+        <div class="management-title">Library Management</div>
+        <table class="table table-striped openings-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Opening</th>
+                    <th>Game Count</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for opening in openings %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ opening.name }}</td>
+                    <td>{{ opening.count }}</td>
+                    <td>
+                        <button class="delete-btn" data-opening="{{ opening.name }}">Delete</button>
+                        <button class="btn btn-info download-pgn-btn" data-opening="{{ opening.name }}" style="margin-left:8px;">Download to PGN</button>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+$(function() {
+    $('.delete-btn').on('click', function() {
+        var opening = $(this).data('opening');
+        if (!confirm('Delete opening "' + opening + '" and all its games? This cannot be undone.')) return;
+        $.ajax({
+            url: '/delete_opening',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ opening: opening }),
+            success: function(resp) {
+                alert('Deleted opening: ' + opening);
+                location.reload();
+            },
+            error: function(xhr) {
+                alert('Error deleting opening: ' + (xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : xhr.statusText));
+            }
+        });
+    });
+    // Download PGN logic
+    $(document).on('click', '.download-pgn-btn', function() {
+        var opening = $(this).data('opening');
+        var url = '/download_pgn/' + encodeURIComponent(opening);
+        // Create a hidden link and trigger download
+        var link = document.createElement('a');
+        link.href = url;
+        link.download = opening + '.pgn';
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(function() { document.body.removeChild(link); }, 100);
+    });
+});
+</script>
+{% endblock %} 
