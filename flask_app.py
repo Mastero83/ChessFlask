@@ -12,7 +12,6 @@ from flask_socketio import SocketIO, emit
 import subprocess
 from pymongo import MongoClient
 import chess.pgn
-# Remove Flask-Menu imports and usage
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
@@ -23,7 +22,8 @@ pgn_jobs = {}
 pgn_jobs_library = {}
 
 # MongoDB setup
-mongo_client = MongoClient('localhost', 27017)
+mongo_host = os.environ.get('MONGO_HOST', 'localhost')
+mongo_client = MongoClient(mongo_host, 27017)
 db = mongo_client['chessclub']
 users_collection = db['users']
 library_collection = db['library_games']
@@ -80,7 +80,6 @@ def login():
         return redirect(url_for('startup'))
     return render_template('login.html')
 
-# Remove Flask-Menu imports and usage
 
 # Update MENU_ITEMS for new sidebar structure
 MENU_ITEMS = [
@@ -231,6 +230,10 @@ def get_move(depth, fen):
         sf = StockfishEngine(parameters=params)
     else:
         sf = StockfishEngine(depth=depth, parameters=params)
+    
+    if not sf.engine:
+        return jsonify({'error': 'Stockfish engine not available'}), 503
+
     sf.set_fen(fen)
     move = sf.get_best_move()
     return move or ''
@@ -242,6 +245,8 @@ def test_get(tester):
 @app.route('/eval/<path:fen>/')
 def get_eval(fen):
     sf = StockfishEngine()
+    if not sf.engine:
+        return '0' # Return a default evaluation if engine is not available
     sf.set_fen(fen)
     score = sf.get_evaluation()
     # score is a dict: {"type": "cp" or "mate", "value": int}
@@ -259,6 +264,8 @@ def get_cheat_moves(depth, fen):
     import chess
     board = chess.Board(fen)
     sf = StockfishEngine(depth=depth)
+    if not sf.engine:
+        return jsonify([]) # Return empty list if engine is not available
     moves_scores = []
     for move in board.legal_moves:
         san = board.san(move)
@@ -281,6 +288,8 @@ def get_cheat_moves(depth, fen):
 @app.route('/stockfish_move/<int:depth>/<path:fen>/')
 def stockfish_move(depth, fen):
     sf = StockfishEngine(depth=depth)
+    if not sf.engine:
+        return jsonify({'error': 'Stockfish engine not available'}), 503
     sf.set_fen(fen)
     best_move = sf.get_best_move()
     evaluation = sf.get_evaluation()
@@ -289,12 +298,23 @@ def stockfish_move(depth, fen):
 @socketio.on('start_stockfish_debug')
 def start_stockfish_debug():
     stockfish_path = os.path.join(os.path.dirname(__file__), 'stockfish', 'stockfish.exe')
-    process = subprocess.Popen([stockfish_path], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
-    emit('debug_output', 'Stockfish started...')
-    def stream_output():
-        for line in process.stdout:
-            emit('debug_output', line.rstrip())
-    threading.Thread(target=stream_output, daemon=True).start()
+    if not os.path.exists(stockfish_path):
+        from shutil import which
+        stockfish_path = which('stockfish')
+    
+    if not stockfish_path:
+        emit('debug_output', 'ERROR: Stockfish executable not found.')
+        return
+
+    try:
+        process = subprocess.Popen([stockfish_path], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+        emit('debug_output', 'Stockfish started...')
+        def stream_output():
+            for line in process.stdout:
+                emit('debug_output', line.rstrip())
+        threading.Thread(target=stream_output, daemon=True).start()
+    except Exception as e:
+        emit('debug_output', f"ERROR: Failed to start Stockfish: {e}")
 
 @app.route('/analyze_game/', methods=['POST'])
 def analyze_game():
@@ -306,6 +326,8 @@ def analyze_game():
     game = chess.pgn.read_game(io.StringIO(pgn))
     board = game.board()
     sf = StockfishEngine(depth=depth)
+    if not sf.engine:
+        return jsonify({'evals': []}) # Return empty list if engine not available
     evals = []
     prev_eval = None
     for move in game.mainline_moves():
@@ -579,4 +601,4 @@ def api_game_json(game_id):
     return jsonify({'game': game_json})
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    socketio.run(app, debug=True, allow_unsafe_werkzeug=True)

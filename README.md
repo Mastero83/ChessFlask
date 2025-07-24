@@ -46,3 +46,29 @@ A Flask-based chess web application with MongoDB-backed game library, annotation
 
 ## Contributing
 See `CONTRIBUTING.md` for guidelines. 
+## Running with Docker
+
+This application can be run using Docker and Docker Compose, which simplifies the setup and ensures a consistent environment.
+
+### Prerequisites
+
+*   **Docker**: Ensure you have Docker installed and running on your system.
+*   **Docker Compose**: Ensure you have Docker Compose installed.
+
+### Running the Application
+
+1.  **Build and Run the Containers**:
+    From the root of the project directory, run the following command:
+    ```bash
+    docker-compose up --build
+    ```
+    This will build the Docker image for the Flask application and start both the `web` and `mongo` services.
+
+2.  **Access the Application**:
+    Open your web browser and navigate to `http://127.0.0.1:5000`.
+
+3.  **Stopping the Application**:
+    To stop the containers, press `Ctrl+C` in the terminal where `docker-compose` is running. To remove the containers and the data volume, run:
+    ```bash
+    docker-compose down -v
+    ```

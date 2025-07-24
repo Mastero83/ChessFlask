@@ -356,20 +356,42 @@ if __name__=="__main__":
 # --- Stockfish Integration ---
 class StockfishEngine:
     def __init__(self, depth=15, parameters=None):
+        self.engine = None
         stockfish_path = os.path.join(os.path.dirname(__file__), 'stockfish', 'stockfish.exe')
-        if parameters is not None:
-            self.engine = Stockfish(path=stockfish_path, depth=depth, parameters=parameters)
-        else:
-            self.engine = Stockfish(path=stockfish_path, depth=depth)
+        
+        if not os.path.exists(stockfish_path):
+            print(f"INFO: Stockfish not found at default path: {stockfish_path}")
+            from shutil import which
+            stockfish_path = which('stockfish')
+            if not stockfish_path:
+                print("WARNING: Stockfish executable not found in default path or system PATH. Engine will be disabled.")
+                return
+            else:
+                print(f"INFO: Found Stockfish in system PATH: {stockfish_path}")
+
+        try:
+            if parameters is not None:
+                self.engine = Stockfish(path=stockfish_path, depth=depth, parameters=parameters)
+            else:
+                self.engine = Stockfish(path=stockfish_path, depth=depth)
+            print("INFO: Stockfish engine initialized successfully.")
+        except Exception as e:
+            print(f"ERROR: Failed to initialize Stockfish from path '{stockfish_path}': {e}")
+            self.engine = None
 
     def set_fen(self, fen):
-        self.engine.set_fen_position(fen)
+        if self.engine:
+            self.engine.set_fen_position(fen)
 
     def get_best_move(self):
-        return self.engine.get_best_move()
+        if self.engine:
+            return self.engine.get_best_move()
+        return None
 
     def get_evaluation(self):
-        return self.engine.get_evaluation()
+        if self.engine:
+            return self.engine.get_evaluation()
+        return {"type": "cp", "value": 0}
 
 # Example usage (for testing):
 # sf = StockfishEngine()
