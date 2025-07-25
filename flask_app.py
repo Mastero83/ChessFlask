@@ -12,18 +12,19 @@ from flask_socketio import SocketIO, emit
 import subprocess
 from pymongo import MongoClient
 import chess.pgn
+from config import Config
 
 app = Flask(__name__)
+app.config.from_object(Config)
 socketio = SocketIO(app, cors_allowed_origins="*")
-app.secret_key = 'chessflask_secret_key'
+app.secret_key = app.config['SECRET_KEY']
 
 # In-memory PGN job storage
 pgn_jobs = {}
 pgn_jobs_library = {}
 
 # MongoDB setup
-mongo_host = os.environ.get('MONGO_HOST', 'localhost')
-mongo_client = MongoClient(mongo_host, 27017)
+mongo_client = MongoClient(app.config['MONGO_HOST'], 27017)
 db = mongo_client['chessclub']
 users_collection = db['users']
 library_collection = db['library_games']
