@@ -19,8 +19,8 @@ A Flask-based chess web application with MongoDB-backed game library, annotation
 
 ## Development Notes
 
-- **Template Variables**: Always pass `game_id` (or `None`) to `index.html` to avoid JSON serialization errors in Jinja. This ensures `window.currentGameId` is always defined in JS.
-- **Annotation Panel**: The annotation panel uses `window.currentGameId` to query MongoDB for move annotations, regardless of the URL structure.
+- **Template Variables**: Always pass `game_id` (or `None`) to `index.html` to avoid JSON serialization errors in Jinja.
+- **Annotation Panel**: Uses `window.currentGameId` to query MongoDB for move annotations.
 - **Robustness**: The frontend and backend are designed to handle missing or undefined fields gracefully.
 
 ## How to Commit
@@ -45,30 +45,43 @@ A Flask-based chess web application with MongoDB-backed game library, annotation
    ```
 
 ## Contributing
-See `CONTRIBUTING.md` for guidelines. 
+
+See `CONTRIBUTING.md` for guidelines.
+
 ## Running with Docker
 
 This application can be run using Docker and Docker Compose, which simplifies the setup and ensures a consistent environment.
 
 ### Prerequisites
 
-*   **Docker**: Ensure you have Docker installed and running on your system.
-*   **Docker Compose**: Ensure you have Docker Compose installed.
+* Docker
+* Docker Compose
 
 ### Running the Application
 
-1.  **Build and Run the Containers**:
-    From the root of the project directory, run the following command:
-    ```bash
-    docker-compose up --build
-    ```
-    This will build the Docker image for the Flask application and start both the `web` and `mongo` services.
+1. **Build and Run the Containers**:
+   ```bash
+   docker-compose up --build
+   ```
+   This will build the Docker image for the Flask application and start both the `web` and `mongo` services.
 
-2.  **Access the Application**:
-    Open your web browser and navigate to `http://127.0.0.1:5000`.
+2. **Access the Application**:
+   Open your web browser and navigate to `http://127.0.0.1:5000`.
 
-3.  **Stopping the Application**:
-    To stop the containers, press `Ctrl+C` in the terminal where `docker-compose` is running. To remove the containers and the data volume, run:
-    ```bash
-    docker-compose down -v
-    ```
+3. **Stopping the Application**:
+   Press `Ctrl+C` in the terminal where `docker-compose` is running. To remove the containers and the data volume, run:
+   ```bash
+   docker-compose down -v
+   ```
+
+## Local Setup without Docker
+
+A helper script is provided to create a Python virtual environment and install dependencies.
+
+```bash
+./scripts/setup_env.sh
+source venv/bin/activate
+python flask_app.py
+```
+
+The script installs all Python requirements, checks for the Stockfish binary, and generates a `.env` file with `MONGO_HOST` and `SECRET_KEY` variables.
