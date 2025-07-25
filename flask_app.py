@@ -1,17 +1,14 @@
-from flask import Flask, render_template, jsonify, request, redirect, url_for, send_file, session, g
-from chess_engine import *
+from flask import Flask, render_template, jsonify, request, redirect, url_for, session
 from chess_engine import StockfishEngine
 import chess
 import io
 import os
-import tempfile
 import threading
 import time
 import uuid
 from flask_socketio import SocketIO, emit
 import subprocess
 from pymongo import MongoClient
-import chess.pgn
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
@@ -29,7 +26,6 @@ users_collection = db['users']
 library_collection = db['library_games']
 sessions_collection = db['sessions']
 
-import functools
 
 def get_session_id():
     if 'session_id' not in session:
@@ -261,7 +257,6 @@ def get_eval(fen):
 
 @app.route('/cheat_moves/<int:depth>/<path:fen>/')
 def get_cheat_moves(depth, fen):
-    import chess
     board = chess.Board(fen)
     sf = StockfishEngine(depth=depth)
     if not sf.engine:
@@ -318,7 +313,6 @@ def start_stockfish_debug():
 
 @app.route('/analyze_game/', methods=['POST'])
 def analyze_game():
-    import chess
     import chess.pgn
     data = request.get_json()
     pgn = data.get('pgn')
