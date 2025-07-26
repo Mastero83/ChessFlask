@@ -1447,7 +1447,8 @@ let isPlayingMoves = false;
 
 function setMoveNavDisabled(disabled) {
     const btns = [
-        '#moveNavFirst', '#moveNavBack', '#moveNavForward', '#moveNavLast', '#moveNavNumber', '#downloadPgnBtn', '#playMovesBtn'
+        '#moveNavFirst', '#moveNavBack', '#moveNavForward', '#moveNavLast',
+        '#moveNavNumber', '#downloadPgnBtn'
     ];
     btns.forEach(sel => {
         const el = document.querySelector(sel);
@@ -1499,9 +1500,7 @@ function playMoves() {
 document.addEventListener('DOMContentLoaded', function() {
     // ... existing code ...
     const playBtn = document.getElementById('playMovesBtn');
-    if (playBtn) {
-        playBtn.addEventListener('click', playMoves);
-    }
+    if (playBtn) playBtn.addEventListener('click', playMoves);
     // Stop playback if user interacts with nav
     ['moveNavFirst','moveNavBack','moveNavForward','moveNavLast','moveNavNumber'].forEach(id => {
         const el = document.getElementById(id);

@@ -8,7 +8,8 @@
 - Home button now reliably returns to the startup page
 - Improved cheat panel UI: depth slider and label are now side by side for better usability
 - Unified sidebar menu: all pages now extend `base.html` and use a single menu definition for consistency
-- Move information panel: improved table, navigation controls, and new play button for auto-playback
+- Move information panel: improved table, navigation controls, and a new play button for auto-playback.
+  Click the play button to automatically cycle through moves; interacting with other controls stops playback.
 
 ### Engine & Analysis
 - All move generation, evaluation, and cheat suggestions powered by Stockfish
