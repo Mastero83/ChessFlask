@@ -11,6 +11,7 @@ A Flask-based chess web application with MongoDB-backed game library, annotation
 - **Debug JSON Viewer**: In the Annotations panel, see the full MongoDB JSON document for the loaded game.
 - **Refresh Annotations from DB**: Button in the Annotations panel to fetch the latest move annotations directly from MongoDB for the current game.
 - **Keyboard Navigation**: Use left/right arrows to step through moves.
+- **Auto-Play Moves**: Click the play button in the move panel to cycle through moves automatically.
 - **Download to PGN**: Export games or openings to PGN, including all annotations.
 
 ## Backend API
