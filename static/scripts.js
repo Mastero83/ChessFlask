@@ -1,132 +1,6 @@
-var board,
-  game = new Chess(),
-  statusEl = $('#status'),
-  fenEl = $('#fen'),
-  pgnEl = $('#pgn');
-
-var navIndex = null;
-var selectedSquare = null;
-var legalDests = [];
 var aiMoveInProgress = false;
 var cheatDepth = 10;
 var evalHistory = [];
-
-// do not pick up pieces if the game is over
-// only pick up pieces for the side to move
-var onDragStart = function(source, piece, position, orientation) {
-  if (game.game_over() === true ||
-      (game.turn() === 'w' && piece.search(/^b/) !== -1) ||
-      (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
-    return false;
-  }
-};
-
-var onDrop = function(source, target) {
-  if (playMode !== 'analysis' && playerColor === 'black' && game.turn() === 'w') {
-    return 'snapback';
-  }
-  if (playMode !== 'analysis' && playerColor === 'white' && game.turn() === 'b') {
-    return 'snapback';
-  }
-  // see if the move is legal
-  var move = game.move({
-    from: source,
-    to: target,
-    promotion: 'q' // NOTE: always promote to a queen for example simplicity
-  });
-
-  // illegal move
-  if (move === null) return 'snapback';
-
-  // Play sound: check if capture
-  playMoveSound(!!move.captured);
-
-  updateStatus();
-  if (playMode !== 'analysis') {
-    getResponseMove();
-  }
-  removeHighlights(); // Clear all highlights after a move
-};
-
-// update the board position after the piece snap
-// for castling, en passant, pawn promotion
-var onSnapEnd = function() {
-    safeBoardPosition(game.fen());
-};
-
-var updateStatus = function() {
-  var status = '';
-
-  var moveColor = 'White';
-  if (game.turn() === 'b') {
-    moveColor = 'Black';
-  }
-
-  // checkmate?
-  if (game.in_checkmate() === true) {
-    status = 'Game over, ' + moveColor + ' is in checkmate.';
-  }
-
-  // draw?
-  else if (game.in_draw() === true) {
-    status = 'Game over, drawn position';
-  }
-
-  // game still on
-  else {
-    status = moveColor + ' to move';
-
-    // check?
-    if (game.in_check() === true) {
-      status += ', ' + moveColor + ' is in check';
-    }
-  }
-
-  setStatus(status);
-  getLastCapture();
-  createTable();
-  updateScroll();
-
-  statusEl.html(status);
-  fenEl.html(game.fen());
-  pgnEl.html(game.pgn());
-
-  navIndex = null;
-  safeBoardPosition(game.fen());
-
-  var winner = null;
-  var reason = null;
-  if (game.in_checkmate()) {
-    winner = game.turn() === 'b' ? 'White' : 'Black';
-    reason = 'Checkmate';
-  } else if (game.in_draw()) {
-    winner = null;
-    reason = 'Draw';
-  }
-  if (game.game_over()) {
-    var moves = game.history().length;
-    showGameOverOverlay(winner, moves, reason);
-  }
-};
-
-var cfg = {
-  draggable: true,
-  position: 'start',
-  onDragStart: onDragStart,
-  onDrop: onDrop,
-  onSnapEnd: onSnapEnd,
-  onMouseoverSquare: onMouseoverSquare,
-  onMouseoutSquare: onMouseoutSquare
-};
-
-var randomResponse = function() {
-    fen = game.fen()
-    $.get('/move/' + depth + '/' + encodeURIComponent(fen) + '/', function(data) {
-        game.move(data, {sloppy: true});
-        // board.position(game.fen());
-        updateStatus();
-    })
-}
 
 // === ELO Mapping ===
 function depthToElo(depth) {
@@ -184,19 +58,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-var getResponseMove = function() {
-    var slider = document.getElementById("engineDepthSlider");
-    var depth = slider ? slider.value : 2;
-    fen = game.fen();
-    var engineSettings = getEngineSettings();
-    $.get('/move/' + depth + '/' + encodeURIComponent(fen) + '/', { engine_settings: engineSettings }, function(data) {
-        var move = game.move(data, {sloppy: true});
-        // Play sound: check if capture
-        playMoveSound(move && !!move.captured);
-        updateStatus();
-        setTimeout(function(){ safeBoardPosition(game.fen()); }, 100);
-    })
-}
+
 
 var setPGN = function() {
   var table = document.getElementById("pgn");
@@ -519,17 +381,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-function highlightSquares(from, to) {
-    removeHighlights();
-    var fromSq = $('[data-square="' + from + '"]');
-    var toSq = $('[data-square="' + to + '"]');
-    fromSq.addClass('highlight-from');
-    toSq.addClass('highlight-to');
-}
-function removeHighlights() {
-    $('.highlight-from').removeClass('highlight-from');
-    $('.highlight-to').removeClass('highlight-to');
-}
+
 
 // Function to update the cheats moves list (to be called after backend support is added)
 function updateCheatsMovesList(moves) {
@@ -988,98 +840,7 @@ function appendDebugOutput(text) {
 }
 // Example usage: appendDebugOutput('Stockfish started...');
 
-function highlightLegalSquares(square) {
-    removeHighlights();
-    var moves = game.moves({ square: square, verbose: true });
-    moves.forEach(function(m) {
-        var $sq = $('[data-square="' + m.to + '"]');
-        // Add a dot only if not already present
-        if ($sq.find('.legal-move-dot').length === 0) {
-            $sq.append('<div class="legal-move-dot"></div>');
-        }
-    });
-    $('[data-square="' + square + '"]').addClass('highlight-selected');
-}
 
-function removeHighlights() {
-    $('.highlight-from').removeClass('highlight-from');
-    $('.highlight-to').removeClass('highlight-to');
-    $('.highlight-selected').removeClass('highlight-selected');
-    $('.legal-move-dot').remove();
-}
-
-// Update highlight-selected CSS and add dot style
-$('<style>\
-    .highlight-selected { background: radial-gradient(circle, rgba(120,120,120,0.15) 60%, transparent 70%) !important; }\
-    .legal-move-dot {\
-        position: absolute;\
-        top: 50%;\
-        left: 50%;\
-        width: 22%;\
-        height: 22%;\
-        background: rgba(30, 100, 200, 0.32);\
-        border-radius: 50%;\
-        transform: translate(-50%, -50%);\
-        pointer-events: none;\
-        z-index: 3;\
-        box-shadow: 0 1px 4px #0002;\
-    }\
-    .square-55d63 { position: relative; }\
-    #board.block-input .square-55d63 { pointer-events: none; opacity: 0.7; }\
-</style>').appendTo('head');
-
-// Remove highlight on hover, only show on click
-function onMouseoverSquare(square, piece) {
-    // No highlight on hover anymore
-}
-
-function onMouseoutSquare(square, piece) {
-    // No highlight on hover anymore
-}
-
-function onSquareClick(square, piece) {
-    if (selectedSquare) {
-        if (square === selectedSquare) {
-            selectedSquare = null;
-            removeHighlights();
-            return;
-        }
-        if (legalDests.includes(square)) {
-            var move = game.move({ from: selectedSquare, to: square, promotion: 'q' });
-            if (move) {
-                playMoveSound(!!move.captured);
-                updateStatus();
-                getResponseMove();
-            }
-            selectedSquare = null;
-            removeHighlights();
-            return;
-        }
-        if (piece && piece[0] === game.turn()) {
-            selectedSquare = square;
-            legalDests = game.moves({ square: square, verbose: true }).map(m => m.to);
-            highlightLegalSquares(square);
-            return;
-        }
-        selectedSquare = null;
-        removeHighlights();
-        return;
-    } else {
-        if (piece && piece[0] === game.turn()) {
-            selectedSquare = square;
-            legalDests = game.moves({ square: square, verbose: true }).map(m => m.to);
-            highlightLegalSquares(square);
-        }
-    }
-}
-
-function blockUserInput(block) {
-    if (block) {
-        $('#board').addClass('block-input');
-    } else {
-        $('#board').removeClass('block-input');
-    }
-}
 
 // Simple heuristic for move classification (placeholder)
 function analyzeGameSummary() {
