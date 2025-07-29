@@ -13,14 +13,21 @@ import subprocess
 from pymongo import MongoClient
 import chess.pgn
 from config import Config
+from celery import celery, init_celery, AsyncResult, states
 
-app = Flask(__name__)
-app.config.from_object(Config)
-socketio = SocketIO(app, cors_allowed_origins="*")
-app.secret_key = app.config['SECRET_KEY']
+socketio = SocketIO()
 
-# In-memory PGN job storage
-pgn_jobs = {}
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(Config)
+    socketio.init_app(app, cors_allowed_origins="*")
+    app.secret_key = app.config['SECRET_KEY']
+    init_celery(app)
+    return app
+
+app = create_app()
+
+# In-memory PGN job storage for /process_pgn
 pgn_jobs_library = {}
 
 # MongoDB setup
@@ -29,6 +36,7 @@ db = mongo_client['chessclub']
 users_collection = db['users']
 library_collection = db['library_games']
 sessions_collection = db['sessions']
+openings_jobs_collection = db['openings_jobs']
 
 import functools
 
@@ -116,33 +124,54 @@ def openings():
         if file:
             pgn_data = file.read().decode('utf-8')
             job_id = str(uuid.uuid4())
-            pgn_jobs[job_id] = {
-                'status': 'processing',
-                'games': [],
+            openings_jobs_collection.insert_one({
+                'job_id': job_id,
+                'status': 'queued',
+                'progress': 0,
+                'games_loaded': 0,
+                'total_games': 0,
                 'created_at': time.time(),
                 'filename': file.filename,
-                'pgn_data': pgn_data,
-                'max_games': max_games
-            }
-            threading.Thread(target=process_pgn_job, args=(job_id, pgn_data, max_games)).start()
+                'pgn_data': pgn_data
+            })
+            process_pgn_task.apply_async(args=(job_id, pgn_data, max_games))
             return redirect(url_for('openings', job_id=job_id))
     job_id = request.args.get('job_id')
     games = []
     status = None
-    if job_id and job_id in pgn_jobs:
-        job = pgn_jobs[job_id]
-        games = job.get('games', [])
-        status = job.get('status', 'unknown')
+    if job_id:
+        job = openings_jobs_collection.find_one({'job_id': job_id})
+        if job:
+            games = job.get('games', [])
+            status = job.get('status', 'unknown')
     return render_template("openings.html", games=games, status=status, job_id=job_id)
 
 @app.route('/openings_status/<job_id>')
 def openings_status(job_id):
-    job = pgn_jobs.get(job_id)
+    job = openings_jobs_collection.find_one({'job_id': job_id})
     if not job:
         return jsonify({'status': 'not_found'})
-    return jsonify({'status': job['status'], 'games': job.get('games', []), 'progress': job.get('progress', 0), 'games_loaded': job.get('games_loaded', 0), 'total_games': job.get('total_games', 0)})
+    return jsonify({
+        'status': job.get('status', 'unknown'),
+        'games': job.get('games', []),
+        'progress': job.get('progress', 0),
+        'games_loaded': job.get('games_loaded', 0),
+        'total_games': job.get('total_games', 0)
+    })
 
-def process_pgn_job(job_id, pgn_data, max_games='1000'):
+@app.route('/task_status/<task_id>')
+def task_status(task_id):
+    res = AsyncResult(task_id, app=celery)
+    response = {'state': res.state}
+    if res.info:
+        if isinstance(res.info, dict):
+            response.update(res.info)
+        else:
+            response['info'] = str(res.info)
+    return jsonify(response)
+
+@celery.task(bind=True)
+def process_pgn_task(self, job_id, pgn_data, max_games='1000'):
     import chess.pgn
     games = []
     pgn_io = io.StringIO(pgn_data)
@@ -188,19 +217,30 @@ def process_pgn_job(job_id, pgn_data, max_games='1000'):
             game_dict[f'move_{i+1}'] = moves[i]
         games.append(game_dict)
         loaded += 1
-        if total_games:
-            pgn_jobs[job_id]['progress'] = int(loaded * 100 / total_games)
-        else:
-            pgn_jobs[job_id]['progress'] = 0
-        pgn_jobs[job_id]['games_loaded'] = loaded
-        pgn_jobs[job_id]['total_games'] = total_games
-    pgn_jobs[job_id]['games'] = games
-    pgn_jobs[job_id]['status'] = 'done'
-    pgn_jobs[job_id]['progress'] = 100
+        progress = int(loaded * 100 / total_games) if total_games else 0
+        openings_jobs_collection.update_one(
+            {'job_id': job_id},
+            {'$set': {
+                'progress': progress,
+                'games_loaded': loaded,
+                'total_games': total_games,
+                'status': 'processing'
+            }}
+        )
+        self.update_state(state='PROGRESS', meta={'progress': progress})
+    openings_jobs_collection.update_one(
+        {'job_id': job_id},
+        {'$set': {
+            'games': games,
+            'status': 'done',
+            'progress': 100
+        }}
+    )
+    return {'games': games}
 
 @app.route('/get_pgn_game/<job_id>/<int:index>')
 def get_pgn_game(job_id, index):
-    job = pgn_jobs.get(job_id)
+    job = openings_jobs_collection.find_one({'job_id': job_id})
     if not job:
         return ''
     pgn_data = job.get('pgn_data', '')

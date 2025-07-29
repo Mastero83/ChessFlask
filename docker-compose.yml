@@ -5,8 +5,11 @@ services:
       - "5000:5000"
     environment:
       - MONGO_HOST=mongo
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     depends_on:
       - mongo
+      - redis
 
   mongo:
     image: mongo:latest
@@ -14,6 +17,18 @@ services:
       - "27017:27017"
     volumes:
       - mongo-data:/data/db
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+
+  celery:
+    build: .
+    command: celery -A flask_app.celery worker --loglevel=info
+    depends_on:
+      - redis
+      - mongo
 
 volumes:
   mongo-data:
